@@ -1,0 +1,3081 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>十二生肖 · 剪刀石头布</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#05050f;--bg2:#0a0a1a;--cyan:#00f0ff;--magenta:#ff00ff;
+  --pink:#ff006e;--green:#00ff88;--orange:#ffaa00;--purple:#a855f7;
+  --gray:#1a1a2e;--text:#e0e0ff;--dim:#6666880;
+}
+body{
+  background:var(--bg);color:var(--text);font-family:'Courier New',monospace;
+  overflow:hidden;height:100vh;width:100vw;
+}
+/* Scanline overlay */
+body::after{
+  content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,240,255,0.015) 2px,rgba(0,240,255,0.015) 4px);
+  pointer-events:none;z-index:9999;
+}
+/* Grid background */
+body::before{
+  content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+  background:linear-gradient(rgba(0,240,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,0.03) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0;
+}
+#game{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column;}
+/* Title screen */
+#title-screen{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100vh;text-align:center;
+}
+#title-screen h1{
+  font-size:4em;color:var(--cyan);text-shadow:0 0 10px var(--cyan),0 0 20px var(--cyan),0 0 40px var(--cyan);
+  animation:glitch 3s infinite;letter-spacing:0.2em;margin-bottom:20px;
+}
+#title-screen h2{
+  font-size:1.5em;color:var(--magenta);text-shadow:0 0 8px var(--magenta);
+  margin-bottom:40px;letter-spacing:0.3em;
+}
+#title-screen .zodiac-wheel{
+  font-size:3em;margin:30px 0;display:flex;gap:15px;flex-wrap:wrap;justify-content:center;
+}
+#title-screen .zodiac-wheel span{
+  display:inline-block;animation:floatZ 3s ease-in-out infinite;
+  text-shadow:0 0 8px currentColor;
+}
+#title-screen .zodiac-wheel span:nth-child(1){color:#f44;color-delay:0s;animation-delay:0s;}
+#title-screen .zodiac-wheel span:nth-child(2){color:#f80;animation-delay:.2s;}
+#title-screen .zodiac-wheel span:nth-child(3){color:#ff0;animation-delay:.4s;}
+#title-screen .zodiac-wheel span:nth-child(4){color:#4f4;animation-delay:.6s;}
+#title-screen .zodiac-wheel span:nth-child(5){color:#0ff;animation-delay:.8s;}
+#title-screen .zodiac-wheel span:nth-child(6){color:#48f;animation-delay:1s;}
+#title-screen .zodiac-wheel span:nth-child(7){color:#84f;animation-delay:1.2s;}
+#title-screen .zodiac-wheel span:nth-child(8){color:#f4f;animation-delay:1.4s;}
+#title-screen .zodiac-wheel span:nth-child(9){color:#a44;animation-delay:1.6s;}
+#title-screen .zodiac-wheel span:nth-child(10){color:#fa0;animation-delay:1.8s;}
+#title-screen .zodiac-wheel span:nth-child(11){color:#8a0;animation-delay:2s;}
+#title-screen .zodiac-wheel span:nth-child(12){color:#0a0;animation-delay:2.2s;}
+@keyframes floatZ{0%,100%{transform:translateY(0);}50%{transform:translateY(-15px);}}
+@keyframes glitch{0%,100%{text-shadow:0 0 10px var(--cyan),0 0 20px var(--cyan),0 0 40px var(--cyan);}33%{text-shadow:2px 0 0 var(--magenta),-2px 0 0 var(--cyan);}66%{text-shadow:-2px 0 0 var(--magenta),2px 0 0 var(--cyan);}}
+.neon-btn{
+  background:transparent;border:2px solid var(--cyan);color:var(--cyan);
+  padding:15px 40px;font-size:1.2em;font-family:'Courier New',monospace;
+  cursor:pointer;text-shadow:0 0 8px var(--cyan);
+  box-shadow:0 0 10px rgba(0,240,255,0.3),inset 0 0 10px rgba(0,240,255,0.1);
+  transition:all .3s;letter-spacing:0.15em;text-transform:uppercase;
+  border-radius:4px;
+}
+.neon-btn:hover{
+  background:rgba(0,240,255,0.15);box-shadow:0 0 20px var(--cyan),inset 0 0 20px rgba(0,240,255,0.2);
+  transform:scale(1.05);
+}
+.neon-btn.magenta{border-color:var(--magenta);color:var(--magenta);text-shadow:0 0 8px var(--magenta);box-shadow:0 0 10px rgba(255,0,255,0.3);}
+.neon-btn.magenta:hover{background:rgba(255,0,255,0.15);box-shadow:0 0 20px var(--magenta);}
+.neon-btn.pink{border-color:var(--pink);color:var(--pink);text-shadow:0 0 8px var(--pink);box-shadow:0 0 10px rgba(255,0,110,0.3);}
+.neon-btn.pink:hover{background:rgba(255,0,110,0.15);box-shadow:0 0 20px var(--pink);}
+.neon-btn.green{border-color:var(--green);color:var(--green);text-shadow:0 0 8px var(--green);box-shadow:0 0 10px rgba(0,255,136,0.3);}
+.neon-btn.green:hover{background:rgba(0,255,136,0.15);box-shadow:0 0 20px var(--green);}
+.neon-btn.orange{border-color:var(--orange);color:var(--orange);text-shadow:0 0 8px var(--orange);box-shadow:0 0 10px rgba(255,170,0,0.3);}
+.neon-btn.orange:hover{background:rgba(255,170,0,0.15);box-shadow:0 0 20px var(--orange);}
+.neon-btn.purple{border-color:var(--purple);color:var(--purple);text-shadow:0 0 8px var(--purple);box-shadow:0 0 10px rgba(168,85,247,0.3);}
+.neon-btn.purple:hover{background:rgba(168,85,247,0.15);box-shadow:0 0 20px var(--purple);}
+.neon-btn:disabled{opacity:0.3;cursor:not-allowed;}
+/* Game screen */
+#game-screen{display:none;flex:1;flex-direction:column;padding:10px 20px;overflow:hidden;}
+.top-bar{display:flex;justify-content:space-between;align-items:center;padding:5px 0;margin-bottom:8px;}
+.top-bar .game-title{font-size:1.3em;color:var(--cyan);text-shadow:0 0 8px var(--cyan);letter-spacing:0.2em;}
+.top-bar .round-info{font-size:1em;color:var(--orange);text-shadow:0 0 6px var(--orange);}
+.arena{display:flex;justify-content:space-between;gap:20px;flex:1;}
+.player-panel{
+  flex:1;background:var(--bg2);border:2px solid;border-radius:8px;
+  padding:15px;display:flex;flex-direction:column;align-items:center;
+  position:relative;min-height:280px;
+}
+.player-panel.player{border-color:var(--cyan);box-shadow:0 0 15px rgba(0,240,255,0.2);}
+.player-panel.ai{border-color:var(--pink);box-shadow:0 0 15px rgba(255,0,110,0.2);}
+.player-panel .panel-name{
+  font-size:1.3em;margin-bottom:8px;letter-spacing:0.15em;
+}
+.player-panel.player .panel-name{color:var(--cyan);text-shadow:0 0 8px var(--cyan);}
+.player-panel.ai .panel-name{color:var(--pink);text-shadow:0 0 8px var(--pink);}
+.animal-display{
+  font-size:4em;line-height:1;margin:5px 0;
+  filter:drop-shadow(0 0 10px currentColor);
+}
+.animal-name{font-size:1.5em;margin:5px 0;letter-spacing:0.1em;}
+.level-badge{
+  display:inline-block;padding:2px 12px;border-radius:12px;
+  font-size:0.85em;margin-bottom:8px;
+}
+.player .level-badge{background:rgba(0,240,255,0.15);color:var(--cyan);border:1px solid var(--cyan);}
+.ai .level-badge{background:rgba(255,0,110,0.15);color:var(--pink);border:1px solid var(--pink);}
+.hp-bar-container{width:100%;margin:8px 0;}
+.hp-label{display:flex;justify-content:space-between;font-size:0.85em;margin-bottom:4px;}
+.hp-bar{height:18px;background:var(--gray);border-radius:9px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,0.1);}
+.hp-fill{height:100%;transition:width .5s ease;border-radius:9px;}
+.player .hp-fill{background:linear-gradient(90deg,var(--green),var(--cyan));box-shadow:0 0 10px var(--green);}
+.ai .hp-fill{background:linear-gradient(90deg,var(--orange),var(--pink));box-shadow:0 0 10px var(--orange);}
+.hp-text{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:0.8em;font-weight:bold;text-shadow:0 0 4px #000;}
+.status-area{margin-top:8px;min-height:50px;display:flex;flex-wrap:wrap;gap:5px;justify-content:center;width:100%;}
+.status-tag{
+  display:inline-flex;align-items:center;gap:3px;padding:3px 8px;
+  border-radius:4px;font-size:0.75em;border:1px solid;
+}
+.status-tag.poison{color:var(--green);border-color:var(--green);background:rgba(0,255,136,0.1);}
+.status-tag.hanging{color:var(--orange);border-color:var(--orange);background:rgba(255,170,0,0.1);}
+.status-tag.airborne{color:var(--cyan);border-color:var(--cyan);background:rgba(0,240,255,0.1);}
+.status-tag.shield{color:var(--purple);border-color:var(--purple);background:rgba(168,85,247,0.1);}
+.status-tag.dodge{color:var(--magenta);border-color:var(--magenta);background:rgba(255,0,255,0.1);}
+.status-tag.immune{color:var(--cyan);border-color:var(--cyan);background:rgba(0,240,255,0.15);}
+.status-tag.god{color:var(--pink);border-color:var(--pink);background:rgba(255,0,110,0.15);animation:pulse 1s infinite;}
+.status-tag.angry{color:#ff4444;border-color:#ff4444;background:rgba(255,68,68,0.1);}
+.status-tag.calm{color:var(--green);border-color:var(--green);background:rgba(0,255,136,0.1);}
+.status-tag.dying{color:var(--pink);border-color:var(--pink);background:rgba(255,0,110,0.15);animation:pulse 0.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+.special-info{margin-top:5px;font-size:0.75em;color:var(--dim);text-align:center;}
+.special-info .use-count{color:var(--orange);}
+/* Center area */
+.center-area{
+  flex:0 0 300px;display:flex;flex-direction:column;align-items:center;
+  justify-content:space-between;padding:10px;
+}
+.vs-text{
+  font-size:3em;color:var(--magenta);text-shadow:0 0 15px var(--magenta);
+  animation:vsPulse 2s infinite;
+}
+@keyframes vsPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+.rps-display{display:flex;gap:30px;margin:10px 0;}
+.rps-icon{font-size:3em;opacity:0;transition:all .3s;}
+.rps-icon.show{opacity:1;animation:rpsShake .5s;}
+@keyframes rpsShake{0%{transform:scale(0) rotate(0deg);}50%{transform:scale(1.3) rotate(180deg);}100%{transform:scale(1) rotate(360deg);}}
+.battle-log{
+  flex:1;width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(0,240,255,0.2);
+  border-radius:6px;padding:8px;overflow-y:auto;font-size:0.85em;max-height:120px;
+  margin-top:8px;
+}
+.battle-log::-webkit-scrollbar{width:4px;}
+.battle-log::-webkit-scrollbar-thumb{background:var(--cyan);}
+.battle-log .log-entry{margin:3px 0;padding:2px 5px;line-height:1.4;}
+.battle-log .log-entry.system{color:var(--cyan);}
+.battle-log .log-entry.player{color:var(--green);}
+.battle-log .log-entry.ai{color:var(--pink);}
+.battle-log .log-entry.damage{color:var(--orange);}
+.battle-log .log-entry.heal{color:var(--green);}
+.battle-log .log-entry.special{color:var(--magenta);}
+.battle-log .log-entry.win{color:var(--cyan);font-weight:bold;}
+.battle-log .log-entry.info{color:var(--dim);}
+/* Bottom action area */
+.action-area{
+  padding:10px 0;display:flex;justify-content:center;align-items:center;
+  gap:15px;min-height:80px;flex-wrap:wrap;
+}
+.action-area .prompt-text{
+  color:var(--orange);text-shadow:0 0 6px var(--orange);font-size:1.1em;
+  letter-spacing:0.1em;
+}
+.rps-btn{
+  width:100px;height:100px;font-size:3em;background:var(--bg2);
+  border:3px solid var(--cyan);border-radius:50%;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 15px rgba(0,240,255,0.3);transition:all .3s;
+}
+.rps-btn:hover{
+  transform:scale(1.1);box-shadow:0 0 25px var(--cyan);
+  background:rgba(0,240,255,0.15);
+}
+.rps-btn.selected{
+  border-color:var(--green);box-shadow:0 0 25px var(--green);
+  background:rgba(0,255,136,0.15);transform:scale(1.1);
+}
+.rps-btn:disabled{opacity:0.3;cursor:not-allowed;transform:none;}
+.action-btn{
+  padding:12px 25px;font-size:1em;font-family:'Courier New',monospace;
+  background:var(--bg2);border:2px solid;border-radius:6px;cursor:pointer;
+  transition:all .3s;letter-spacing:0.1em;display:flex;flex-direction:column;
+  align-items:center;gap:3px;min-width:120px;
+}
+.action-btn .btn-desc{font-size:0.7em;opacity:0.7;}
+.action-btn:hover{transform:scale(1.05);}
+.action-btn.attack{border-color:var(--pink);color:var(--pink);box-shadow:0 0 10px rgba(255,0,110,0.3);}
+.action-btn.attack:hover{background:rgba(255,0,110,0.15);box-shadow:0 0 20px var(--pink);}
+.action-btn.heal{border-color:var(--green);color:var(--green);box-shadow:0 0 10px rgba(0,255,136,0.3);}
+.action-btn.heal:hover{background:rgba(0,255,136,0.15);box-shadow:0 0 20px var(--green);}
+.action-btn.special{border-color:var(--magenta);color:var(--magenta);box-shadow:0 0 10px rgba(255,0,255,0.3);}
+.action-btn.special:hover{background:rgba(255,0,255,0.15);box-shadow:0 0 20px var(--magenta);}
+.action-btn:disabled{opacity:0.3;cursor:not-allowed;transform:none;}
+/* Overlay */
+.overlay{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;
+  z-index:100;
+}
+.overlay.show{display:flex;}
+.overlay-content{
+  background:var(--bg2);border:2px solid var(--cyan);border-radius:12px;
+  padding:40px;text-align:center;max-width:500px;
+  box-shadow:0 0 30px rgba(0,240,255,0.3);
+}
+.overlay-content h2{color:var(--cyan);text-shadow:0 0 10px var(--cyan);margin-bottom:20px;font-size:2em;letter-spacing:0.15em;}
+.overlay-content p{margin:10px 0;line-height:1.6;color:var(--text);}
+.overlay-content .btn-row{display:flex;gap:15px;justify-content:center;margin-top:25px;flex-wrap:wrap;}
+.overlay-content .animal-list{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:15px 0;}
+.overlay-content .animal-item{font-size:1.8em;cursor:pointer;padding:8px;border-radius:8px;border:2px solid transparent;transition:all .3s;}
+.overlay-content .animal-item:hover{border-color:var(--cyan);background:rgba(0,240,255,0.1);}
+.overlay-content .animal-item.selected{border-color:var(--green);background:rgba(0,255,136,0.15);}
+.choice-grid{display:flex;gap:15px;justify-content:center;margin:20px 0;}
+/* Damage animation */
+.damage-popup{
+  position:absolute;font-size:2em;font-weight:bold;
+  animation:dmgFloat 1.5s forwards;pointer-events:none;
+  text-shadow:0 0 10px currentColor;z-index:50;
+}
+@keyframes dmgFloat{0%{opacity:0;transform:translateY(0) scale(0.5);}20%{opacity:1;transform:translateY(-20px) scale(1.2);}100%{opacity:0;transform:translateY(-60px) scale(1);}}
+.shake{animation:shakeAnim 0.5s;}
+@keyframes shakeAnim{0%,100%{transform:translateX(0);}25%{transform:translateX(-8px);}75%{transform:translateX(8px);}}
+.flash{animation:flashAnim 0.3s;}
+@keyframes flashAnim{0%,100%{filter:brightness(1);}50%{filter:brightness(3);}}
+/* Thinking indicator */
+.thinking{display:inline-block;animation:thinkDots 1.4s infinite;}
+@keyframes thinkDots{0%,20%{content:'';}40%{content:'.';}60%{content:'..';}80%,100%{content:'...';}}
+.thinking::after{content:'...';animation:thinkDots 1.4s infinite;}
+/* Responsive */
+@media(max-width:900px){
+  .arena{flex-direction:column;}
+  .center-area{flex:0 0 auto;}
+  #title-screen h1{font-size:2.5em;}
+}
+/* Team roster */
+.team-roster{
+  margin-top:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;
+  width:100%;padding-top:8px;border-top:1px solid rgba(255,255,255,0.1);
+}
+.team-roster .roster-slot{
+  width:36px;height:36px;border-radius:6px;display:flex;align-items:center;
+  justify-content:center;font-size:1.4em;border:2px solid;transition:all .3s;
+  position:relative;
+}
+.team-roster .roster-slot.alive{border-color:var(--green);opacity:1;}
+.team-roster .roster-slot.current{border-color:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:pulse 1s infinite;}
+.team-roster .roster-slot.dead{border-color:#444;opacity:0.3;filter:grayscale(1);}
+.team-roster .roster-slot.banned{border-color:var(--pink);opacity:0.4;text-decoration:line-through;}
+.team-roster .roster-slot .slot-num{
+  position:absolute;top:-8px;right:-4px;font-size:0.6em;background:var(--bg);
+  border-radius:50%;width:14px;height:14px;display:flex;align-items:center;
+  justify-content:center;border:1px solid currentColor;
+}
+/* Selection grid for mode 2 */
+.select-grid{
+  display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:20px 0;
+}
+.select-grid .animal-card{
+  width:80px;padding:12px 8px;border:2px solid;border-radius:10px;
+  cursor:pointer;transition:all .3s;text-align:center;
+  background:var(--bg2);
+}
+.select-grid .animal-card:hover{transform:scale(1.08);box-shadow:0 0 15px var(--cyan);}
+.select-grid .animal-card .emoji{font-size:2.5em;display:block;}
+.select-grid .animal-card .name{font-size:0.9em;margin-top:4px;}
+.select-grid .animal-card.picked{border-color:var(--green);background:rgba(0,255,136,0.1);opacity:0.4;cursor:not-allowed;}
+.select-grid .animal-card.picked-by-player{border-color:var(--cyan);background:rgba(0,240,255,0.15);}
+.select-grid .animal-card.picked-by-ai{border-color:var(--pink);background:rgba(255,0,110,0.15);}
+.select-grid .animal-card.banned{border-color:var(--orange);background:rgba(255,170,0,0.15);text-decoration:line-through;opacity:0.4;cursor:not-allowed;}
+.select-grid .animal-card.deployed{border-color:var(--green);background:rgba(0,255,136,0.15);box-shadow:0 0 10px rgba(0,255,136,0.3);}
+.select-grid .animal-card.selectable{cursor:pointer;}
+.select-grid .animal-card.selectable:hover{transform:scale(1.08);box-shadow:0 0 15px var(--green);}
+/* Draft order display */
+.draft-order{
+  display:flex;gap:8px;justify-content:center;align-items:center;margin:10px 0;
+  font-size:0.9em;
+}
+.draft-order .step{padding:4px 10px;border-radius:4px;border:1px solid;}
+.draft-order .step.red{border-color:var(--pink);color:var(--pink);}
+.draft-order .step.blue{border-color:var(--cyan);color:var(--cyan);}
+.draft-order .step.done{opacity:0.3;text-decoration:line-through;}
+.draft-order .step.current{box-shadow:0 0 10px currentColor;animation:pulse 1s infinite;}
+/* Team display in overlay */
+.team-display{
+  display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:15px 0;
+}
+.team-display .team-char{
+  width:60px;padding:8px 4px;border:2px solid;border-radius:8px;text-align:center;
+  font-size:0.8em;transition:all .3s;
+}
+.team-display .team-char .emoji{font-size:2em;display:block;}
+.team-display .team-char.bannable{cursor:pointer;}
+.team-display .team-char.bannable:hover{transform:scale(1.1);box-shadow:0 0 10px var(--orange);}
+.team-display .team-char.banned{border-color:var(--orange)!important;opacity:0.3;text-decoration:line-through;}
+.team-display .team-char.selectable{cursor:pointer;}
+.team-display .team-char.selectable:hover{transform:scale(1.1);box-shadow:0 0 10px var(--green);}
+.team-display .team-char.selected{border-color:var(--green);box-shadow:0 0 10px var(--green);}
+
+</style>
+</head>
+<body>
+<div id="game">
+  <!-- Title Screen -->
+  <div id="title-screen">
+    <h1>十二生肖</h1>
+    <h2>剪刀石头布 · 赛博对决</h2>
+    <div class="zodiac-wheel">
+      <span>🐭</span><span>🐂</span><span>🐯</span><span>🐰</span>
+      <span>🐉</span><span>🐍</span><span>🐴</span><span>🐑</span>
+      <span>🐵</span><span>🐔</span><span>🐶</span><span>🐷</span>
+    </div>
+    <div style="margin:20px 0;color:var(--dim);font-size:0.9em;max-width:600px;line-height:1.8;">
+      <span style="color:var(--cyan)">模式一</span>：从鼠到猪，逐级进化，猪再赢即最终胜利<br>
+      <span style="color:var(--magenta)">模式二</span>：12生肖选人→BP禁用→排兵布阵→4v4团队接力战
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;">
+      <button class="neon-btn" onclick="startGame(1)">模式一 · 等级进化</button>
+      <button class="neon-btn magenta" onclick="startGame(2)">模式二 · 团队对战</button>
+    </div>
+  </div>
+  <!-- Game Screen -->
+  <div id="game-screen">
+    <div class="top-bar">
+      <span class="game-title">十二生肖</span>
+      <span class="round-info" id="round-info">第 1 回合 · 鼠 vs 鼠</span>
+    </div>
+    <div class="arena">
+      <!-- Player Panel -->
+      <div class="player-panel player" id="player-panel">
+        <div class="panel-name">玩家</div>
+        <div class="animal-display" id="player-animal">🐭</div>
+        <div class="animal-name" id="player-animal-name">鼠</div>
+        <div class="level-badge" id="player-level">Lv.1</div>
+        <div class="hp-bar-container">
+          <div class="hp-label"><span>HP</span><span id="player-hp-text">10/10</span></div>
+          <div class="hp-bar"><div class="hp-fill" id="player-hp-fill" style="width:100%"></div></div>
+        </div>
+        <div class="status-area" id="player-status"></div>
+        <div class="special-info" id="player-special-info"></div>
+        <div class="team-roster" id="player-roster" style="display:none"></div>
+      </div>
+      <!-- Center Area -->
+      <div class="center-area">
+        <div class="vs-text">VS</div>
+        <div class="rps-display">
+          <div class="rps-icon" id="player-rps"></div>
+          <div class="rps-icon" id="ai-rps"></div>
+        </div>
+        <div class="battle-log" id="battle-log"></div>
+      </div>
+      <!-- AI Panel -->
+      <div class="player-panel ai" id="ai-panel">
+        <div class="panel-name">AI</div>
+        <div class="animal-display" id="ai-animal">🐭</div>
+        <div class="animal-name" id="ai-animal-name">鼠</div>
+        <div class="level-badge" id="ai-level">Lv.1</div>
+        <div class="hp-bar-container">
+          <div class="hp-label"><span>HP</span><span id="ai-hp-text">10/10</span></div>
+          <div class="hp-bar"><div class="hp-fill" id="ai-hp-fill" style="width:100%"></div></div>
+        </div>
+        <div class="status-area" id="ai-status"></div>
+        <div class="special-info" id="ai-special-info"></div>
+        <div class="team-roster" id="ai-roster" style="display:none"></div>
+      </div>
+    </div>
+    <!-- Action Area -->
+    <div class="action-area" id="action-area"></div>
+  </div>
+  <!-- Overlay -->
+  <div class="overlay" id="overlay">
+    <div class="overlay-content" id="overlay-content"></div>
+  </div>
+</div>
+
+<script>
+// ==================== ANIMAL DATA ====================
+const ZODIAC = [
+  {name:'鼠',emoji:'🐭',level:1,baseHp:10,baseAttack:1,passive:'饕餮：无血量上限限制（鼠vs鼠时双方被动失效）'},
+  {name:'牛',emoji:'🐂',level:2,baseHp:10,baseAttack:1,special:'上吊：造成0.5伤害+使对方无法攻击，对方需花回合解除',passive:'无'},
+  {name:'虎',emoji:'🐯',level:3,baseHp:10,baseAttack:1,passive:'虎威：连胜提升普攻伤害(1→2→3上限)，中断归1'},
+  {name:'兔',emoji:'🐰',level:4,baseHp:10,baseAttack:1,special:'闪避(3次)：RPS判定胜则免疫本回合伤害；消耗2次=极限闪避(100%免伤)'},
+  {name:'龙',emoji:'🐉',level:5,baseHp:10,baseAttack:1,special:'腾飞：回0.5血+滞空(下回合结束前，受到伤害≤1)',passive:'俯冲：滞空受击可扣1血反伤同等伤害'},
+  {name:'蛇',emoji:'🐍',level:6,baseHp:9,baseAttack:1,special:'放毒：挂毒印记(最多2层)，每层每回合-1血；引爆(1次)：每层2伤害后清除。可觉醒(上限3层,HP上限6)',passive:'搏命：HP上限9，可觉醒(上限3层,HP上限6)'},
+  {name:'马',emoji:'🐴',level:7,baseHp:12,baseAttack:1.5,special:'旋踢：1伤害+20%吸血(敌方当前血量的20%，向上取整0.5)',passive:'重伤：伤害等量扣除敌方血量上限(低于饕餮)'},
+  {name:'羊',emoji:'🐑',level:8,baseHp:12,baseAttack:1.5,special:'占卜(3次)：预测下回合RPS结果。赢→延迟2伤害；输→回1.5血+操控对方；平→回1血+额外回合',passive:'幸运：每预测成功1次+1次占卜机会'},
+  {name:'猴',emoji:'🐵',level:9,baseHp:15,baseAttack:1,special:'暴击：敌方血量减半(向下取整0.5)',passive:'三相：平静(普攻1+回1,无法特技)|愤怒(普攻2,受双倍)|神格(2回合倒计时,50%减伤,特技变斩杀:HP≤4秒杀,不可切换)'},
+  {name:'鸡',emoji:'🐔',level:10,baseHp:15,baseAttack:1,special:'延生：濒死时可用，治疗成功则退出濒死+1血',passive:'司命：死亡时恢复死亡前血量(1次)，之后2回合100%免伤+普攻2.5'},
+  {name:'狗',emoji:'🐶',level:11,baseHp:10,baseAttack:1,special:'审判(3次)：回合开始前用，使敌方特技和被动增益本回合失效(优先最高)',passive:'回溯：每3次平局可回满血(1次/局)'},
+  {name:'猪',emoji:'🐷',level:12,baseHp:15,baseAttack:1.5,special:'压迫(2次)：5伤害+①无视免伤②下回合敌方只能普攻③降为1伤害+获3护盾',passive:'勇毅：血量初次<6获2护盾，<3获1护盾(下回合生效)；<5时普攻2伤害'}
+];
+
+const RPS = {rock:'✊',paper:'✋',scissors:'✌️'};
+const RPS_NAMES = {rock:'石头',paper:'布',scissors:'剪刀'};
+
+// ==================== GAME STATE ====================
+let G = null;
+
+function createPlayer(isAI) {
+  return {
+    isAI: isAI,
+    level: 0,
+    hp: 10, maxHp: 10, baseMaxHp: 10, baseAttack: 1,
+    // Status effects
+    poisonMarks: 0, maxPoison: 2,
+    isHanging: false, isAirborne: false, airborneEndRound: -1,
+    shield: 0, shieldNext: 0,
+    winStreak: 0, // Tiger
+    monkeyForm: null, godCountdown: 0, godEntered: false,
+    chickenDying: false, chickenS命Used: false, chickenImmunity: 0,
+    dogTieCount: 0, dogTraceUsed: false,
+    snakeAwakened: false, snakeExplodeUsed: false,
+    dragonAirborneActive: false,
+    // Special uses
+    dodgeUses: 3, divineUses: 3, judgeUses: 3, oppressUses: 2,
+    // Round-temporary
+    dodgeActive: false, extremeDodge: false,
+    judged: false, // dog's审判
+    judgePending: false, // dog's审判 pending (consumed only if round happens)
+    prediction: null, // goat's prediction
+    goatControlActive: false, // player controls AI
+    immunityActive: false,
+    oppressedNext: false, // pig's压迫② (set this round, activates next round)
+    oppressedActive: false, // pig's压迫② (currently active)
+    // Track
+    preDeathHp: 0,
+    shieldTriggered6: false, shieldTriggered3: false, // pig
+    // RPS choice
+    rpsChoice: null,
+    // Form switch tracking
+    switchedFormThisTurn: false,
+  };
+}
+
+function initGame() {
+  G = {
+    mode: 1,
+    phase: 'title',
+    player: createPlayer(false),
+    ai: createPlayer(true),
+    round: 0,
+    gamesPlayed: 0,
+    log: [],
+    rpsWinner: null,
+    pendingDamage: {player: 0, ai: 0},
+    pendingHeal: {player: 0, ai: 0},
+    damageDetails: {player: [], ai: []},
+    actionPending: false,
+    rabbitDodgePrompt: false,
+    goatPredictPhase: false,
+    currentAction: null,
+    battleEnded: false,
+    soundCtx: null,
+    // Mode 2 state
+    m2: null,
+  };
+}
+
+// ==================== SOUND ====================
+function initSound() {
+  if (!G.soundCtx) {
+    try { G.soundCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+}
+function playSound(freq, dur, type='sine', vol=0.1) {
+  if (!G.soundCtx) initSound();
+  if (!G.soundCtx) return;
+  const ctx = G.soundCtx;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type; osc.frequency.value = freq;
+  gain.gain.value = vol;
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start();
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+  osc.stop(ctx.currentTime + dur);
+}
+function sfx(name) {
+  switch(name) {
+    case 'click': playSound(800,0.05,'square',0.08); break;
+    case 'rps': playSound(400,0.1,'triangle',0.1); setTimeout(()=>playSound(600,0.1,'triangle',0.1),100); break;
+    case 'hit': playSound(150,0.2,'sawtooth',0.15); break;
+    case 'heal': playSound(523,0.15,'sine',0.1); setTimeout(()=>playSound(659,0.15,'sine',0.1),100); setTimeout(()=>playSound(784,0.2,'sine',0.1),200); break;
+    case 'special': playSound(200,0.3,'square',0.1); setTimeout(()=>playSound(400,0.2,'square',0.1),100); setTimeout(()=>playSound(800,0.3,'square',0.1),200); break;
+    case 'win': playSound(523,0.15,'sine',0.12); setTimeout(()=>playSound(659,0.15,'sine',0.12),150); setTimeout(()=>playSound(784,0.15,'sine',0.12),300); setTimeout(()=>playSound(1047,0.3,'sine',0.12),450); break;
+    case 'lose': playSound(200,0.3,'sawtooth',0.12); setTimeout(()=>playSound(150,0.4,'sawtooth',0.12),200); break;
+    case 'levelup': playSound(400,0.1,'square',0.1); setTimeout(()=>playSound(600,0.1,'square',0.1),100); setTimeout(()=>playSound(800,0.1,'square',0.1),200); setTimeout(()=>playSound(1000,0.3,'square',0.1),300); break;
+    case 'tie': playSound(300,0.1,'sine',0.08); break;
+    case 'dodge': playSound(800,0.05,'sine',0.1); setTimeout(()=>playSound(1200,0.1,'sine',0.1),50); break;
+  }
+}
+
+// ==================== UTILITY ====================
+function log(msg, type='info') {
+  G.log.push({msg, type});
+  const el = document.getElementById('battle-log');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry ' + type;
+  entry.textContent = msg;
+  el.appendChild(entry);
+  el.scrollTop = el.scrollHeight;
+  // Keep last 50
+  while (el.children.length > 50) el.removeChild(el.firstChild);
+}
+
+function getAnimal(level) { return ZODIAC[level]; }
+
+function getActionName(action) {
+  const names = {
+    attack: '普通攻击', heal: '治疗', special: '特技', dodge: '闪避',
+    extreme_dodge: '极限闪避', poison: '放毒', explode: '引爆',
+    unhang: '下吊', removepoison: '解除毒印', monkey_burst: '暴击',
+    switch_calm: '切换平静', switch_angry: '切换愤怒', switch_god: '切换神格',
+    monkey_slash: '斩杀', chicken_extend: '延生', pig_oppress: '压迫'
+  };
+  return names[action] || action;
+}
+
+function calcCompensation(levelA, levelB) {
+  const diff = Math.abs(levelA - levelB);
+  if (diff === 0) return 0;
+  return 3 + 2 * (diff - 1);
+}
+
+function roundUpHalf(v) { return Math.ceil(v * 2) / 2; }
+function roundDownHalf(v) { return Math.floor(v * 2) / 2; }
+
+function getAttack(p) {
+  let atk = p.baseAttack;
+  const animal = ZODIAC[p.level];
+  if (!p.judged) {
+    // Pig passive: HP < 5 → attack 2
+    if (animal.name === '猪' && p.hp < 5) atk = 2;
+    // Tiger win streak
+    if (animal.name === '虎' && p.winStreak >= 1) {
+      atk = Math.min(1 + p.winStreak, 3);
+    }
+    // Monkey forms (attack boost only, not damage vulnerability)
+    if (animal.name === '猴') {
+      if (p.monkeyForm === 'angry') atk = 2;
+      else if (p.monkeyForm === 'god') atk = 0;
+      else atk = 1; // calm
+    }
+    // Chicken 司命 attack boost
+    if (animal.name === '鸡' && p.immunityActive) atk = 2.5;
+  }
+  return atk;
+}
+
+function getMaxHp(p) {
+  // Use current maxHp (may have been modified by horse's 重伤 etc.)
+  if (p.maxHp > 0) return p.maxHp;
+  // Fallback if maxHp not yet set
+  const animal = ZODIAC[p.level];
+  let maxHp = animal.baseHp;
+  if (animal.name === '蛇' && p.snakeAwakened) maxHp = 6;
+  return maxHp;
+}
+
+function getEffectiveMaxHp(p) {
+  const animal = ZODIAC[p.level];
+  let maxHp = getMaxHp(p);
+  // Rat passive: no HP cap (except rat vs rat, or disabled by审判)
+  if (animal.name === '鼠' && !p.judged) {
+    const other = p.isAI ? G.player : G.ai;
+    if (other.level === p.level) {
+      // rat vs rat, passive disabled
+    } else {
+      maxHp = Infinity; // no cap
+    }
+  }
+  return maxHp;
+}
+
+// ==================== GAME FLOW ====================
+function startGame(mode) {
+  initSound();
+  sfx('click');
+  document.getElementById('title-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'flex';
+  initGame();
+  G.mode = mode || 1;
+
+  if (G.mode === 1) {
+    G.player.level = 0;
+    G.ai.level = 0;
+    log('=== 模式一：等级进化 ===', 'system');
+    log('双方初始：鼠', 'system');
+    startNewGame();
+  } else {
+    log('=== 模式二：团队对战 ===', 'system');
+    startMode2();
+  }
+}
+
+function startNewGame() {
+  G.gamesPlayed++;
+  G.round = 0;
+  G.battleEnded = false;
+  // Reset player states for new game
+  resetForNewGame(G.player);
+  resetForNewGame(G.ai);
+  // Set HP based on animal + compensation
+  setupHpForNewGame(G.player, G.ai);
+  setupHpForNewGame(G.ai, G.player);
+
+  // AI snake awakening (handled before player check so it's not skipped)
+  const aiAnimal = ZODIAC[G.ai.level];
+  if (aiAnimal.name === '蛇') {
+    G.ai.snakeAwakened = Math.random() < 0.4;
+    G.ai.maxPoison = G.ai.snakeAwakened ? 3 : 2;
+    if (G.ai.snakeAwakened) {
+      G.ai.maxHp = 6; G.ai.hp = 6;
+      log('AI蛇进入觉醒状态', 'ai');
+    }
+  }
+
+  // Player snake awakening choice
+  const pAnimal = ZODIAC[G.player.level];
+  if (pAnimal.name === '蛇') {
+    showSnakeAwakeningChoice();
+    return;
+  }
+  beginRound();
+}
+
+function showSnakeAwakeningChoice() {
+  showOverlay(`
+    <h2>蛇 · 觉醒选择</h2>
+    <p>你是否要进入<strong style="color:var(--pink)">觉醒状态</strong>？</p>
+    <p style="color:var(--dim);font-size:0.85em;">觉醒：毒印记上限3层，但血量上限降为6<br>不觉醒：毒印记上限2层，血量上限9</p>
+    <div class="btn-row">
+      <button class="neon-btn pink" onclick="chooseSnakeAwakening(true)">进入觉醒</button>
+      <button class="neon-btn green" onclick="chooseSnakeAwakening(false)">不觉醒</button>
+    </div>
+  `);
+}
+
+function chooseSnakeAwakening(awaken) {
+  G.player.snakeAwakened = awaken;
+  G.player.maxPoison = awaken ? 3 : 2;
+  if (awaken) {
+    G.player.maxHp = 6;
+    G.player.hp = 6;
+    log('玩家选择进入觉醒状态！HP上限降为6', 'special');
+  } else {
+    log('玩家不进入觉醒状态', 'info');
+  }
+  hideOverlay();
+  // AI snake awakening only in mode 1 (in mode 2, AI snake is handled separately)
+  if (G.mode === 1) {
+    const aiAnimal = ZODIAC[G.ai.level];
+    if (aiAnimal.name === '蛇') {
+      G.ai.snakeAwakened = Math.random() < 0.4;
+      G.ai.maxPoison = G.ai.snakeAwakened ? 3 : 2;
+      if (G.ai.snakeAwakened) {
+        G.ai.maxHp = 6; G.ai.hp = 6;
+        log('AI进入觉醒状态！', 'special');
+      }
+    }
+  }
+  beginRound();
+}
+
+function resetForNewGame(p) {
+  p.hp = 0; p.maxHp = 0; p.baseMaxHp = 0;
+  p.poisonMarks = 0; p.isHanging = false; p.isAirborne = false; p.airborneEndRound = -1;
+  p.shield = 0; p.shieldNext = 0;
+  p.winStreak = 0;
+  p.monkeyForm = null; p.godCountdown = 0; p.godEntered = false;
+  p.chickenDying = false; p.chickenS命Used = false; p.chickenImmunity = 0;
+  p.dogTieCount = 0; p.dogTraceUsed = false;
+  p.snakeExplodeUsed = false; p.snakeAwakened = false;
+  p.dodgeActive = false; p.extremeDodge = false;
+  p.judged = false; p.judgePending = false; p.prediction = null; p.goatControlActive = false;
+  p.immunityActive = false; p.oppressedNext = false; p.oppressedActive = false;
+  p.preDeathHp = 0; p.shieldTriggered6 = false; p.shieldTriggered3 = false;
+  p.rpsChoice = null; p.switchedFormThisTurn = false;
+  // Reset special uses based on animal
+  const animal = ZODIAC[p.level];
+  p.dodgeUses = animal.name === '兔' ? 3 : 0;
+  p.divineUses = animal.name === '羊' ? 3 : 0;
+  p.judgeUses = animal.name === '狗' ? 3 : 0;
+  p.oppressUses = animal.name === '猪' ? 2 : 0;
+  // Monkey starts in calm form
+  if (animal.name === '猴') p.monkeyForm = 'calm';
+  // Snake max poison
+  p.maxPoison = 2;
+}
+
+function setupHpForNewGame(p, opponent) {
+  const animal = ZODIAC[p.level];
+  let baseHp = animal.baseHp;
+  let baseMaxHp = animal.baseHp;
+  // Snake special handling
+  if (animal.name === '蛇') {
+    baseHp = 9; baseMaxHp = 9;
+    if (p.snakeAwakened) { baseHp = 6; baseMaxHp = 6; }
+  }
+  // Compensation (mode 1 only - no level concept in mode 2)
+  if (G.mode !== 2) {
+    const comp = calcCompensation(p.level, opponent.level);
+    if (p.level < opponent.level) {
+      baseHp += comp;
+      baseMaxHp += comp;
+    }
+  }
+  p.hp = baseHp;
+  p.maxHp = baseMaxHp;
+  p.baseMaxHp = baseMaxHp;
+  p.baseAttack = animal.baseAttack;
+}
+
+function beginRound() {
+  G.round++;
+  G.pendingDamage = {player: 0, ai: 0};
+  G.pendingHeal = {player: 0, ai: 0};
+  G.damageDetails = {player: [], ai: []};
+  G.rpsWinner = null;
+  G.currentAction = null;
+  // Clear round-temporary effects
+  G.player.dodgeActive = false; G.player.extremeDodge = false;
+  G.player.judged = false; G.player.judgePending = false;
+  G.ai.dodgeActive = false; G.ai.extremeDodge = false;
+  G.ai.judged = false; G.ai.judgePending = false;
+  // Activate oppression from last round (pig's压迫②)
+  G.player.oppressedActive = G.player.oppressedNext;
+  G.player.oppressedNext = false;
+  G.ai.oppressedActive = G.ai.oppressedNext;
+  G.ai.oppressedNext = false;
+  G.player.rpsChoice = null;
+  G.ai.rpsChoice = null;
+  G.player.switchedFormThisTurn = false;
+  G.ai.switchedFormThisTurn = false;
+
+  // Monkey god form countdown
+  checkMonkeyGodCountdown(G.player);
+  checkMonkeyGodCountdown(G.ai);
+
+  // If monkey died from god form countdown, end game
+  if (G.battleEnded) {
+    G.winner = G.player.hp <= 0 ? G.ai : G.player;
+    const loser = G.winner === G.player ? G.ai : G.player;
+    const winnerName = G.winner.isAI ? 'AI' : '玩家';
+    log(`猴的神格倒计时结束，${winnerName === '玩家' ? 'AI' : '玩家'}死亡`, 'win');
+    if (G.mode === 2) {
+      mode2FighterDeath(loser, G.winner);
+      mode2HandleBattleEnd();
+    } else {
+      handleGameEnd();
+    }
+    return;
+  }
+
+  // Chicken immunity: activate and countdown
+  if (G.player.chickenImmunity > 0) {
+    G.player.immunityActive = true;
+    G.player.chickenImmunity--;
+  }
+  if (G.ai.chickenImmunity > 0) {
+    G.ai.immunityActive = true;
+    G.ai.chickenImmunity--;
+  }
+
+  // Airborne expiry
+  if (G.player.isAirborne && G.round > G.player.airborneEndRound) {
+    G.player.isAirborne = false;
+    log('玩家的滞空状态结束', 'info');
+  }
+  if (G.ai.isAirborne && G.round > G.ai.airborneEndRound) {
+    G.ai.isAirborne = false;
+    log('AI的滞空状态结束', 'info');
+  }
+
+  // Shield from pig passive (applied next round)
+  if (G.player.shieldNext > 0) { G.player.shield += G.player.shieldNext; G.player.shieldNext = 0; }
+  if (G.ai.shieldNext > 0) { G.ai.shield += G.ai.shieldNext; G.ai.shieldNext = 0; }
+
+  // Oppressed next (pig's压迫②) - cleared at end of round in resolveRound
+
+  const pAnimal = ZODIAC[G.player.level];
+  const aAnimal = ZODIAC[G.ai.level];
+  document.getElementById('round-info').textContent = `第 ${G.round} 回合 · ${pAnimal.name} vs ${aAnimal.name}`;
+
+  // Check if player or AI is dog - can use审判 before RPS
+  // Also goat can use占卜
+  // For simplicity, handle pre-round abilities in a prompt
+  handlePreRoundAbilities();
+}
+
+function checkMonkeyGodCountdown(p) {
+  const animal = ZODIAC[p.level];
+  if (animal.name === '猴' && p.monkeyForm === 'god' && p.godCountdown > 0) {
+    p.godCountdown--;
+    log(`${p.isAI?'AI':'玩家'}的神格形态倒计时：${p.godCountdown}`, 'special');
+    if (p.godCountdown <= 0) {
+      log(`${p.isAI?'AI':'玩家'}的神格倒计时结束，猴死亡！`, 'special');
+      p.hp = 0;
+      G.battleEnded = true;
+    }
+  }
+}
+
+function handlePreRoundAbilities() {
+  // Player pre-round abilities
+  const pAnimal = ZODIAC[G.player.level];
+  const aAnimal = ZODIAC[G.ai.level];
+
+  // Dog's审判 - player
+  if (pAnimal.name === '狗' && G.player.judgeUses > 0) {
+    // Show prompt for player
+    showActionArea(`
+      <span class="prompt-text">是否使用【审判】？(使AI本回合特技和被动增益失效)</span>
+      <button class="neon-btn orange" onclick="useDogJudge(true)">使用审判 (${G.player.judgeUses})</button>
+      <button class="neon-btn" onclick="useDogJudge(false)">不使用</button>
+    `);
+    return;
+  }
+  // Goat's占卜 - player
+  if (pAnimal.name === '羊' && G.player.divineUses > 0) {
+    showActionArea(`
+      <span class="prompt-text">是否使用【占卜】预测本回合RPS结果？</span>
+      <button class="neon-btn magenta" onclick="useGoatDivine(true)">使用占卜 (${G.player.divineUses})</button>
+      <button class="neon-btn" onclick="useGoatDivine(false)">不使用</button>
+    `);
+    return;
+  }
+
+  // AI pre-round abilities
+  handleAIPreRound();
+}
+
+function hasSpecialOrPassiveBenefit(p) {
+  const animal = ZODIAC[p.level];
+  return (animal.special && animal.special !== '无') || (animal.passive && animal.passive !== '无');
+}
+
+function handleAIPreRound() {
+  const aAnimal = ZODIAC[G.ai.level];
+  if (aAnimal.name === '狗' && G.ai.judgeUses > 0) {
+    if (hasSpecialOrPassiveBenefit(G.player) && Math.random() < 0.6) {
+      G.ai.judgePending = true;
+      G.player.judged = true;
+      log('AI使用【审判】！玩家本回合特技和被动增益失效', 'ai');
+      sfx('special');
+    }
+  }
+  if (aAnimal.name === '羊' && G.ai.divineUses > 0) {
+    if (Math.random() < 0.5) {
+      G.ai.divineUses--;
+      const choices = ['win','lose','tie'];
+      G.ai.prediction = choices[Math.floor(Math.random()*3)];
+      log(`AI使用【占卜】`, 'ai');
+      sfx('special');
+    }
+  }
+  startRPSPhase();
+}
+
+function useDogJudge(use) {
+  sfx('click');
+  if (use) {
+    G.player.judgePending = true;
+    G.ai.judged = true;
+    log('玩家使用【审判】！AI本回合特技和被动增益失效（平局则不消耗）', 'player');
+    sfx('special');
+  }
+  handleAIPreRound();
+}
+
+function useGoatDivine(use) {
+  sfx('click');
+  if (use) {
+    G.player.divineUses--;
+    showActionArea(`
+      <span class="prompt-text">请选择你的预测：</span>
+      <button class="neon-btn green" onclick="setGoatPrediction('win')">预测 赢</button>
+      <button class="neon-btn orange" onclick="setGoatPrediction('lose')">预测 输</button>
+      <button class="neon-btn cyan" onclick="setGoatPrediction('tie')">预测 平</button>
+    `);
+    return;
+  }
+  handleAIPreRound();
+}
+
+function setGoatPrediction(pred) {
+  sfx('click');
+  G.player.prediction = pred;
+  log(`玩家预测本回合：${pred==='win'?'赢':pred==='lose'?'输':'平'}`, 'player');
+  handleAIPreRound();
+}
+
+// ==================== RPS PHASE ====================
+function startRPSPhase() {
+  showActionArea(`
+    <span class="prompt-text">选择你的出招：</span>
+    <button class="rps-btn" onclick="playerRPS('rock')">✊</button>
+    <button class="rps-btn" onclick="playerRPS('paper')">✋</button>
+    <button class="rps-btn" onclick="playerRPS('scissors')">✌️</button>
+  `);
+}
+
+function playerRPS(choice) {
+  sfx('rps');
+  // Disable RPS buttons immediately to prevent double-clicks
+  document.querySelectorAll('.rps-btn').forEach(btn => btn.disabled = true);
+  G.player.rpsChoice = choice;
+  // AI RPS
+  G.ai.rpsChoice = aiChooseRPS();
+  // Show choices
+  const pEl = document.getElementById('player-rps');
+  const aEl = document.getElementById('ai-rps');
+  pEl.textContent = RPS[choice];
+  aEl.textContent = RPS[G.ai.rpsChoice];
+  pEl.classList.add('show');
+  setTimeout(()=>aEl.classList.add('show'), 300);
+
+  setTimeout(()=>resolveRPS(), 1200);
+}
+
+function aiChooseRPS() {
+  // Simple AI: mostly random, slight anti-repeat
+  const choices = ['rock','paper','scissors'];
+  return choices[Math.floor(Math.random()*3)];
+}
+
+function resolveRPS() {
+  const p = G.player.rpsChoice;
+  const a = G.ai.rpsChoice;
+  log(`玩家：${RPS_NAMES[p]} vs AI：${RPS_NAMES[a]}`, 'system');
+
+  if (p === a) {
+    // Tie
+    sfx('tie');
+    log('平局！', 'info');
+    G.player.dogTieCount++;
+    G.ai.dogTieCount++;
+    // Dog's回溯
+    checkDogTrace(G.player);
+    checkDogTrace(G.ai);
+
+    // Check goat 'tie' prediction
+    let tiePredictWinner = null;
+    if (G.player.prediction === 'tie') {
+      log('玩家占卜预测平局成功！回1血+获得额外行动', 'player');
+      sfx('special');
+      healPlayer(G.player, 1);
+      if (!G.player.judged) G.player.divineUses++;
+      tiePredictWinner = 'player';
+      G.player.prediction = null;
+    } else if (G.ai.prediction === 'tie') {
+      log('AI占卜预测平局成功！回1血+获得额外行动', 'ai');
+      sfx('special');
+      healPlayer(G.ai, 1);
+      if (!G.ai.judged) G.ai.divineUses++;
+      tiePredictWinner = 'ai';
+      G.ai.prediction = null;
+    } else {
+      // Clear predictions
+      G.player.prediction = null;
+      G.ai.prediction = null;
+    }
+
+    // Clear the other side's prediction if it wasn't 'tie'
+    if (tiePredictWinner === 'player') {
+      G.ai.prediction = null;
+    } else if (tiePredictWinner === 'ai') {
+      G.player.prediction = null;
+    }
+
+    if (tiePredictWinner) {
+      // Player or AI gets extra action despite the tie - consume judge uses
+      if (G.player.judgePending) { G.player.judgeUses--; G.player.judgePending = false; }
+      if (G.ai.judgePending) { G.ai.judgeUses--; G.ai.judgePending = false; }
+      // Player or AI gets extra action despite the tie
+      G.rpsWinner = tiePredictWinner;
+      const pEl = document.getElementById('player-rps');
+      const aEl = document.getElementById('ai-rps');
+      pEl.classList.remove('show');
+      aEl.classList.remove('show');
+      log(`${tiePredictWinner==='player'?'玩家':'AI'}获得额外行动回合！`, tiePredictWinner==='player'?'player':'ai');
+      setTimeout(()=>proceedToAction(tiePredictWinner), 1000);
+      return;
+    }
+
+    // Normal tie: void round - don't consume judge uses
+    if (G.player.judgePending) {
+      G.player.judgePending = false;
+      G.ai.judged = false;
+      log('审判未生效（平局无回合），不消耗次数', 'info');
+    }
+    if (G.ai.judgePending) {
+      G.ai.judgePending = false;
+      G.player.judged = false;
+      log('审判未生效（平局无回合），不消耗次数', 'info');
+    }
+    log('本回合作废，进入下一回合', 'info');
+    const pEl = document.getElementById('player-rps');
+    const aEl = document.getElementById('ai-rps');
+    pEl.classList.remove('show');
+    aEl.classList.remove('show');
+    setTimeout(()=>beginRound(), 1500);
+    return;
+  }
+
+  // Determine winner
+  const beats = {rock:'scissors', paper:'rock', scissors:'paper'};
+  let winner = beats[p] === a ? 'player' : 'ai';
+  G.rpsWinner = winner;
+  // Consume judge uses (round is happening)
+  if (G.player.judgePending) { G.player.judgeUses--; G.player.judgePending = false; }
+  if (G.ai.judgePending) { G.ai.judgeUses--; G.ai.judgePending = false; }
+
+  // Tiger win streak
+  const pAnimal = ZODIAC[G.player.level];
+  const aAnimal = ZODIAC[G.ai.level];
+  if (winner === 'player') {
+    if (pAnimal.name === '虎') G.player.winStreak++;
+    if (aAnimal.name === '虎') G.ai.winStreak = 0;
+  } else {
+    if (aAnimal.name === '虎') G.ai.winStreak++;
+    if (pAnimal.name === '虎') G.player.winStreak = 0;
+  }
+
+  // Check goat prediction
+  checkGoatPrediction(winner);
+
+  sfx('rps');
+  log(`${winner==='player'?'玩家':'AI'}赢得本回合！`, winner==='player'?'player':'ai');
+
+  setTimeout(()=>proceedToAction(winner), 800);
+}
+
+function checkDogTrace(p) {
+  const animal = ZODIAC[p.level];
+  if (animal.name === '狗' && p.dogTieCount >= 3 && !p.dogTraceUsed) {
+    let triggered = false;
+    if (p.isAI) {
+      if (p.hp < p.maxHp * 0.5) {
+        p.hp = p.maxHp;
+        p.dogTraceUsed = true;
+        triggered = true;
+        log(`AI触发【回溯】，回满血！`, 'ai');
+        sfx('special');
+      }
+    } else {
+      if (p.hp < p.maxHp * 0.4) {
+        p.hp = p.maxHp;
+        p.dogTraceUsed = true;
+        triggered = true;
+        log(`玩家触发【回溯】，回满血！`, 'player');
+        sfx('special');
+      }
+    }
+    // Only reset counter when the ability is actually used
+    if (triggered) p.dogTieCount = 0;
+  }
+}
+
+function checkGoatPrediction(winner) {
+  // Player goat
+  if (G.player.prediction) {
+    const pred = G.player.prediction;
+    let actual;
+    if (winner === 'player') actual = 'win';
+    else actual = 'lose';
+    // Note: tie is already handled separately, so prediction 'tie' can't be checked here
+    // Actually, if the player predicted 'tie' and it was a tie, that was handled before reaching here
+    // So if we're here, it wasn't a tie
+
+    if (pred === actual) {
+      log(`玩家占卜预测成功！`, 'player');
+      sfx('special');
+      // Lucky passive: +1 use (disabled by审判)
+      if (!G.player.judged) G.player.divineUses++;
+      if (pred === 'win') {
+        // Delayed damage: 2 damage to enemy next round (automatic, doesn't consume action)
+        G.ai._delayedDamage = (G.ai._delayedDamage || 0) + 2;
+        log(`【延迟伤害】：下回合自动对AI造成2点伤害`, 'player');
+      } else if (pred === 'lose') {
+        // Heal 1.5 + control enemy's action
+        healPlayer(G.player, 1.5);
+        log(`玩家回血1.5，并操控AI行动！`, 'player');
+        G.player.goatControlActive = true; // player will choose AI's action
+      } else if (pred === 'tie') {
+        // This shouldn't happen here since ties are handled separately
+        // But just in case:
+        healPlayer(G.player, 1);
+        log(`玩家回血1，获得额外回合`, 'player');
+      }
+    } else {
+      log(`玩家占卜预测失败`, 'info');
+    }
+    G.player.prediction = null;
+  }
+
+  // AI goat
+  if (G.ai.prediction) {
+    const pred = G.ai.prediction;
+    let actual;
+    if (winner === 'ai') actual = 'win';
+    else actual = 'lose';
+
+    if (pred === actual) {
+      log(`AI占卜预测成功！`, 'ai');
+      sfx('special');
+      if (!G.ai.judged) G.ai.divineUses++;
+      if (pred === 'win') {
+        G.player._delayedDamage = (G.player._delayedDamage || 0) + 2;
+        log(`【延迟伤害】：下回合自动对玩家造成2点伤害`, 'ai');
+      } else if (pred === 'lose') {
+        healPlayer(G.ai, 1.5);
+        log(`AI回血1.5，操控玩家行动`, 'ai');
+        G.ai.goatControlActive = true;
+      }
+    } else {
+      log(`AI占卜预测失败`, 'info');
+    }
+    G.ai.prediction = null;
+  }
+}
+
+// ==================== ACTION PHASE ====================
+function proceedToAction(winner) {
+  const winnerObj = winner === 'player' ? G.player : G.ai;
+  const loserObj = winner === 'player' ? G.ai : G.player;
+  const winnerName = winner === 'player' ? '玩家' : 'AI';
+
+  // Clear RPS display
+  document.getElementById('player-rps').classList.remove('show');
+  document.getElementById('ai-rps').classList.remove('show');
+
+  // Apply delayed damage (from goat prediction)
+  if (loserObj._delayedDamage) {
+    queueDamage(loserObj, loserObj._delayedDamage, '延迟伤害');
+    log(`${loserObj.isAI?'AI':'玩家'}受到${loserObj._delayedDamage}点延迟伤害`, 'damage');
+    loserObj._delayedDamage = 0;
+  }
+  if (winnerObj._delayedDamage) {
+    queueDamage(winnerObj, winnerObj._delayedDamage, '延迟伤害');
+    log(`${winnerObj.isAI?'AI':'玩家'}受到${winnerObj._delayedDamage}点延迟伤害`, 'damage');
+    winnerObj._delayedDamage = 0;
+  }
+
+  // If AI is the winner, AI decides action
+  if (winner === 'ai') {
+    setTimeout(()=>aiActionPhase(), 500);
+    return;
+  }
+
+  // Player is winner - check if AI goat controls player's action
+  if (G.ai.goatControlActive) {
+    log('AI操控玩家行动！', 'ai');
+    G.ai.goatControlActive = false;
+    const action = aiDecideAction(winnerObj, loserObj);
+    showActionArea(`<span class="prompt-text" style="color:var(--pink)">AI操控你的行动：${getActionName(action)}</span>`);
+    setTimeout(()=>executeAIAction(winnerObj, loserObj, action), 1500);
+    return;
+  }
+
+  // Player is winner - show action buttons
+  showPlayerActionButtons(winnerObj, loserObj);
+}
+
+function showPlayerActionButtons(winner, loser) {
+  const animal = ZODIAC[winner.level];
+  const isWinner = winner === G.player;
+  const atk = getAttack(winner);
+  let buttons = [];
+
+  // Chicken dying state: only show延生
+  if (winner.chickenDying) {
+    showActionArea(`<span class="prompt-text" style="color:var(--pink)">濒死状态！使用【延生】治疗：</span>
+      <button class="action-btn heal" onclick="playerAction('chicken_extend')">
+        <span>延生</span><span class="btn-desc">治疗→退出濒死+1血</span>
+      </button>`);
+    return;
+  }
+
+  // Pig's压迫②: if oppressed, only normal attack
+  if (winner.oppressedActive) {
+    log('受【压迫】影响，本回合只能使用普通攻击', 'info');
+    const atk2 = getAttack(winner);
+    showActionArea(`<span class="prompt-text" style="color:var(--orange)">被压迫！只能普通攻击：</span>
+      <button class="action-btn attack" onclick="playerAction('attack')">
+        <span>普通攻击</span><span class="btn-desc">${atk2}伤害</span>
+      </button>`);
+    return;
+  }
+
+  // If winner is hanging (target of 上吊), can ONLY unhang
+  if (winner.isHanging) {
+    showActionArea(`<span class="prompt-text" style="color:var(--orange)">被上吊！只能解除上吊状态：</span>
+      <button class="action-btn heal" onclick="playerAction('unhang')">
+        <span>下吊</span><span class="btn-desc">解除上吊状态</span>
+      </button>`);
+    return;
+  }
+
+  // Check if poisoned and can remove
+  if (loser.poisonMarks > 0 && animal.name !== '蛇') {
+    // The loser can remove poison, but the winner acts
+    // Actually, the one who is poisoned removes it on their own turn
+    // The winner doesn't remove the loser's poison
+  }
+
+  // If winner has poison marks, they can choose to remove
+  if (winner.poisonMarks > 0) {
+    buttons.push(`<button class="action-btn heal" onclick="playerAction('removepoison')">
+      <span>解除毒印</span><span class="btn-desc">移除1层毒印记</span>
+    </button>`);
+  }
+
+  // Normal attack
+  buttons.push(`<button class="action-btn attack" onclick="playerAction('attack')">
+    <span>普通攻击</span><span class="btn-desc">造成${atk}点伤害</span>
+  </button>`);
+
+  // Heal
+  const healAmount = (G.mode === 2 && animal.name === '鼠') ? 2 : 1;
+  buttons.push(`<button class="action-btn heal" onclick="playerAction('heal')">
+    <span>治疗</span><span class="btn-desc">回复${healAmount}点血量</span>
+  </button>`);
+
+  // Special moves
+  if (animal.name === '牛') {
+    buttons.push(`<button class="action-btn special" onclick="playerAction('special')">
+      <span>上吊</span><span class="btn-desc">0.5伤害+使敌方无法攻击</span>
+    </button>`);
+  } else if (animal.name === '兔') {
+    if (winner.dodgeUses > 0) {
+      buttons.push(`<button class="action-btn special" onclick="playerAction('dodge')">
+        <span>闪避 (${winner.dodgeUses})</span><span class="btn-desc">RPS判定胜则免伤</span>
+      </button>`);
+    }
+    if (winner.dodgeUses >= 2) {
+      buttons.push(`<button class="action-btn special" onclick="playerAction('extreme_dodge')">
+        <span>极限闪避</span><span class="btn-desc">消耗2次,100%免伤</span>
+      </button>`);
+    }
+  } else if (animal.name === '龙') {
+    buttons.push(`<button class="action-btn special" onclick="playerAction('special')">
+      <span>腾飞</span><span class="btn-desc">回0.5血+滞空(受伤≤1)</span>
+    </button>`);
+  } else if (animal.name === '蛇') {
+    buttons.push(`<button class="action-btn special" onclick="playerAction('poison')">
+      <span>放毒</span><span class="btn-desc">+1毒印记(敌方每层每回合-1)</span>
+    </button>`);
+    if (loser.poisonMarks > 0 && !winner.snakeExplodeUsed) {
+      buttons.push(`<button class="action-btn special" onclick="playerAction('explode')">
+        <span>引爆</span><span class="btn-desc">每层2伤害后清除(1次)</span>
+      </button>`);
+    }
+  } else if (animal.name === '马') {
+    buttons.push(`<button class="action-btn special" onclick="playerAction('special')">
+      <span>旋踢</span><span class="btn-desc">1伤害+20%吸血</span>
+    </button>`);
+  } else if (animal.name === '羊') {
+    // 占卜 is pre-round, no special in action
+  } else if (animal.name === '猴') {
+    if (winner.monkeyForm === 'angry') {
+      buttons.push(`<button class="action-btn special" onclick="playerAction('monkey_burst')">
+        <span>暴击</span><span class="btn-desc">敌方血量减半</span>
+      </button>`);
+    }
+    if (winner.monkeyForm === 'calm') {
+      buttons.push(`<button class="action-btn special" onclick="playerAction('switch_angry')">
+        <span>切换:愤怒</span><span class="btn-desc">普攻2,受双倍伤害</span>
+      </button>`);
+      buttons.push(`<button class="action-btn special" onclick="playerAction('switch_god')">
+        <span>切换:神格</span><span class="btn-desc">2回合倒计时,50%减伤,斩杀</span>
+      </button>`);
+    } else if (winner.monkeyForm === 'angry') {
+      buttons.push(`<button class="action-btn special" onclick="playerAction('switch_calm')">
+        <span>切换:平静</span><span class="btn-desc">普攻1+回1,无法特技</span>
+      </button>`);
+      buttons.push(`<button class="action-btn special" onclick="playerAction('switch_god')">
+        <span>切换:神格</span><span class="btn-desc">2回合倒计时,50%减伤,斩杀</span>
+      </button>`);
+    } else {
+      // God form - special is斩杀
+      const canKill = loser.hp <= 4;
+      buttons.push(`<button class="action-btn special" ${canKill?'':'disabled'} onclick="playerAction('monkey_slash')">
+        <span>斩杀</span><span class="btn-desc">${canKill?'直接击杀':'需敌方HP≤4'}</span>
+      </button>`);
+    }
+  } else if (animal.name === '鸡') {
+    // 延生 only usable in dying state
+    if (winner.chickenDying) {
+      buttons.push(`<button class="action-btn heal" onclick="playerAction('chicken_extend')">
+        <span>延生</span><span class="btn-desc">治疗成功退出濒死+1血</span>
+      </button>`);
+    }
+  } else if (animal.name === '狗') {
+    // 审判 is pre-round
+  } else if (animal.name === '猪') {
+    if (winner.oppressUses > 0) {
+      buttons.push(`<button class="action-btn special" onclick="playerAction('pig_oppress')">
+        <span>压迫 (${winner.oppressUses})</span><span class="btn-desc">5伤害+选择附加效果</span>
+      </button>`);
+    }
+  }
+
+  showActionArea(`<span class="prompt-text">选择行动：</span>` + buttons.join(''));
+}
+
+function playerAction(action) {
+  sfx('click');
+  G.currentAction = action;
+  const winner = G.rpsWinner === 'player' ? G.player : G.ai;
+  const loser = G.rpsWinner === 'player' ? G.ai : G.player;
+
+  // If goat control is active and player is controlling AI's action
+  // (This means the AI won RPS but player predicted 'lose' correctly)
+  // Actually, goat control means player chooses what AI does
+  // This is handled in aiActionPhase
+
+  switch(action) {
+    case 'attack': doAttack(winner, loser); break;
+    case 'heal': doHeal(winner); break;
+    case 'special': doSpecial(winner, loser); break;
+    case 'dodge': doDodge(winner, false); break;
+    case 'extreme_dodge': doDodge(winner, true); break;
+    case 'poison': doPoison(winner, loser); break;
+    case 'explode': doExplode(winner, loser); break;
+    case 'unhang': doUnhang(winner); break;
+    case 'removepoison': doRemovePoison(winner); break;
+    case 'monkey_burst': doMonkeyBurst(winner, loser); break;
+    case 'switch_calm': doMonkeySwitch(winner, 'calm'); break;
+    case 'switch_angry': doMonkeySwitch(winner, 'angry'); break;
+    case 'switch_god': doMonkeySwitch(winner, 'god'); break;
+    case 'monkey_slash': doMonkeySlash(winner, loser); break;
+    case 'chicken_extend': doChickenExtend(winner); break;
+    case 'pig_oppress': showPigOppressOptions(winner, loser); return; // needs sub-choice
+  }
+
+  // Proceed to resolution after action
+  if (action !== 'pig_oppress') {
+    setTimeout(()=>resolveRound(), 800);
+  }
+}
+
+function showPigOppressOptions(winner, loser) {
+  showActionArea(`
+    <span class="prompt-text">选择【压迫】的附加效果：</span>
+    <button class="action-btn special" onclick="doPigOppress(1)">
+      <span>无视免伤</span><span class="btn-desc">5伤害无视免伤效果</span>
+    </button>
+    <button class="action-btn special" onclick="doPigOppress(2)">
+      <span>限制攻击</span><span class="btn-desc">下回合敌方只能普攻</span>
+    </button>
+    <button class="action-btn special" onclick="doPigOppress(3)">
+      <span>护盾</span><span class="btn-desc">伤害降为1+获3护盾</span>
+    </button>
+  `);
+}
+
+function doPigOppress(option) {
+  sfx('special');
+  const winner = G.rpsWinner === 'player' ? G.player : G.ai;
+  const loser = G.rpsWinner === 'player' ? G.ai : G.player;
+  winner.oppressUses--;
+  let dmg = 5;
+  let extra = '';
+
+  if (option === 1) {
+    // Ignore immunity
+    queueDamage(loser, dmg, '压迫(无视免伤)', true);
+    extra = '无视免伤';
+  } else if (option === 2) {
+    queueDamage(loser, dmg, '压迫');
+    loser.oppressedNext = true;
+    extra = '限制敌方下回合只能普攻';
+  } else if (option === 3) {
+    dmg = 1;
+    queueDamage(loser, dmg, '压迫');
+    winner.shield += 3;
+    extra = '伤害降为1+获3护盾';
+  }
+  log(`${winner.isAI?'AI':'玩家'}使用【压迫】：${dmg}伤害,${extra}`, winner.isAI?'ai':'player');
+  shakePanel(loser);
+  setTimeout(()=>resolveRound(), 800);
+}
+
+// ==================== ACTIONS ====================
+function doAttack(winner, loser) {
+  const atk = getAttack(winner);
+  // Check if loser is judged (dog's审判 disables passive benefits)
+  // Passive benefits that affect damage reduction are disabled
+  // But basic damage still applies
+  // Check loser's dodge
+  if (loser.dodgeActive || loser.extremeDodge) {
+    log(`${loser.isAI?'AI':'玩家'}闪避成功，免疫伤害！`, loser.isAI?'ai':'player');
+    sfx('dodge');
+    return;
+  }
+  // Monkey calm form: attack + heal 1 (passive benefit, disabled by审判)
+  const animal = ZODIAC[winner.level];
+  if (animal.name === '猴' && winner.monkeyForm === 'calm' && !winner.judged) {
+    healPlayer(winner, 1);
+    log(`${winner.isAI?'AI':'玩家'}平静形态普攻附带回1血`, 'heal');
+  }
+
+  queueDamage(loser, atk, '普攻');
+  log(`${winner.isAI?'AI':'玩家'}普通攻击 → ${atk}伤害`, winner.isAI?'ai':'player');
+  sfx('hit');
+  shakePanel(loser);
+
+  // Horse passive: 重伤 - reduce max HP (lower priority than饕餮)
+  if (animal.name === '马' && !winner.judged) {
+    const loserAnimal = ZODIAC[loser.level];
+    if (loserAnimal.name === '鼠') {
+      // Rat's饕餮 blocks max HP reduction (unless rat vs rat where both passives cancel)
+      // But horse is not rat, so this is always horse vs rat → 饕餮 blocks
+    } else {
+      loser.maxHp = Math.max(1, loser.maxHp - atk);
+      log(`${loser.isAI?'AI':'玩家'}血量上限-${atk}(重伤)`, 'damage');
+    }
+  }
+}
+
+function doHeal(p) {
+  const animal = ZODIAC[p.level];
+  const healAmount = (G.mode === 2 && animal.name === '鼠') ? 2 : 1;
+  healPlayer(p, healAmount);
+  log(`${p.isAI?'AI':'玩家'}治疗 → 回复${healAmount}点血量`, 'heal');
+  sfx('heal');
+  flashPanel(p, 'green');
+}
+
+function healPlayer(p, amount) {
+  G.pendingHeal[p.isAI?'ai':'player'] += amount;
+}
+
+function doSpecial(winner, loser) {
+  const animal = ZODIAC[winner.level];
+  sfx('special');
+
+  if (animal.name === '牛') {
+    // 上吊
+    queueDamage(loser, 0.5, '上吊');
+    loser.isHanging = true;
+    log(`${winner.isAI?'AI':'玩家'}使用【上吊】→ 0.5伤害+敌方无法攻击`, winner.isAI?'ai':'player');
+    shakePanel(loser);
+  } else if (animal.name === '龙') {
+    // 腾飞
+    healPlayer(winner, 0.5);
+    winner.isAirborne = true;
+    winner.airborneEndRound = G.round + 1;
+    log(`${winner.isAI?'AI':'玩家'}使用【腾飞】→ 回0.5血+进入滞空状态`, winner.isAI?'ai':'player');
+    flashPanel(winner, 'cyan');
+  } else if (animal.name === '马') {
+    // 旋踢
+    queueDamage(loser, 1, '旋踢');
+    const lifesteal = roundUpHalf(loser.hp * 0.2);
+    healPlayer(winner, lifesteal);
+    log(`${winner.isAI?'AI':'玩家'}使用【旋踢】→ 1伤害+吸血${lifesteal}`, winner.isAI?'ai':'player');
+    shakePanel(loser);
+    // Horse passive: 重伤
+    if (!winner.judged) {
+      const loserAnimal = ZODIAC[loser.level];
+      if (loserAnimal.name !== '鼠') {
+        loser.maxHp = Math.max(1, loser.maxHp - 1);
+        log(`${loser.isAI?'AI':'玩家'}血量上限-1(重伤)`, 'damage');
+      }
+    }
+  }
+}
+
+function doDodge(p, extreme) {
+  const animal = ZODIAC[p.level];
+  if (animal.name !== '兔') return;
+
+  if (extreme) {
+    p.dodgeUses -= 2;
+    p.extremeDodge = true;
+    p.dodgeActive = true;
+    log(`${p.isAI?'AI':'玩家'}使用【极限闪避】→ 本回合100%免伤`, p.isAI?'ai':'player');
+    sfx('dodge');
+  } else {
+    p.dodgeUses--;
+    // RPS judgment
+    const pChoice = ['rock','paper','scissors'][Math.floor(Math.random()*3)];
+    const aChoice = ['rock','paper','scissors'][Math.floor(Math.random()*3)];
+    const beats = {rock:'scissors', paper:'rock', scissors:'paper'};
+    if (pChoice === aChoice) {
+      // Tie, redo
+      log(`${p.isAI?'AI':'玩家'}闪避判定：平局，重试`, 'info');
+      // Redo once
+      const p2 = ['rock','paper','scissors'][Math.floor(Math.random()*3)];
+      const a2 = ['rock','paper','scissors'][Math.floor(Math.random()*3)];
+      if (p2 === a2) {
+        log(`${p.isAI?'AI':'玩家'}闪避判定：再次平局，闪避失败`, 'info');
+      } else if (beats[p2] === a2) {
+        p.dodgeActive = true;
+        log(`${p.isAI?'AI':'玩家'}闪避成功！本回合免疫伤害`, p.isAI?'ai':'player');
+        sfx('dodge');
+      } else {
+        log(`${p.isAI?'AI':'玩家'}闪避失败`, 'info');
+      }
+    } else if (beats[pChoice] === aChoice) {
+      p.dodgeActive = true;
+      log(`${p.isAI?'AI':'玩家'}闪避成功！本回合免疫伤害`, p.isAI?'ai':'player');
+      sfx('dodge');
+    } else {
+      log(`${p.isAI?'AI':'玩家'}闪避失败`, 'info');
+    }
+  }
+}
+
+function doPoison(winner, loser) {
+  const animal = ZODIAC[winner.level];
+  if (animal.name !== '蛇') return;
+  if (loser.poisonMarks < loser.maxPoison) {
+    loser.poisonMarks++;
+    log(`${winner.isAI?'AI':'玩家'}使用【放毒】→ 敌方毒印记+1 (当前${loser.poisonMarks}层)`, winner.isAI?'ai':'player');
+    sfx('special');
+    flashPanel(loser, 'green');
+  } else {
+    log(`毒印记已满！放毒失败`, 'info');
+  }
+}
+
+function doExplode(winner, loser) {
+  if (winner.snakeExplodeUsed) { log('引爆已使用过', 'info'); return; }
+  winner.snakeExplodeUsed = true;
+  const dmg = loser.poisonMarks * 2;
+  queueDamage(loser, dmg, '引爆');
+  log(`${winner.isAI?'AI':'玩家'}使用【引爆】→ ${dmg}伤害(每层2伤害),清除所有印记`, winner.isAI?'ai':'player');
+  loser.poisonMarks = 0;
+  sfx('special');
+  shakePanel(loser);
+}
+
+function doUnhang(p) {
+  p.isHanging = false;
+  log(`${p.isAI?'AI':'玩家'}选择下吊，解除上吊状态`, p.isAI?'ai':'player');
+}
+
+function doRemovePoison(p) {
+  if (p.poisonMarks > 0) {
+    p.poisonMarks--;
+    log(`${p.isAI?'AI':'玩家'}解除1层毒印记(剩余${p.poisonMarks}层)`, p.isAI?'ai':'player');
+  }
+}
+
+function doMonkeyBurst(winner, loser) {
+  const newHp = roundDownHalf(loser.hp / 2);
+  const dmg = loser.hp - newHp;
+  loser.hp = newHp; // Direct HP manipulation, bypasses damage queue
+  log(`${winner.isAI?'AI':'玩家'}使用【暴击】→ 敌方血量减半(-${dmg} → HP:${loser.hp.toFixed(1)})`, winner.isAI?'ai':'player');
+  sfx('special');
+  shakePanel(loser);
+  showDamagePopup(loser, dmg);
+}
+
+function doMonkeySwitch(p, form) {
+  p.monkeyForm = form;
+  p.switchedFormThisTurn = true;
+  if (form === 'calm') {
+    log(`${p.isAI?'AI':'玩家'}切换至平静形态 → 普攻1+回1,无法特技`, p.isAI?'ai':'player');
+  } else if (form === 'angry') {
+    log(`${p.isAI?'AI':'玩家'}切换至愤怒形态 → 普攻2,受双倍伤害`, p.isAI?'ai':'player');
+  } else if (form === 'god') {
+    p.godCountdown = 2;
+    p.godEntered = true;
+    log(`${p.isAI?'AI':'玩家'}进入神格形态 → 2回合倒计时,50%减伤,斩杀可用`, p.isAI?'ai':'player');
+  }
+  sfx('special');
+  flashPanel(p, 'pink');
+}
+
+function doMonkeySlash(winner, loser) {
+  // 斩杀 - priority above all immunity/reduction except chicken's司命
+  const loserAnimal = ZODIAC[loser.level];
+  if (loser.immunityActive) {
+    // Chicken's司命 immunity blocks it
+    log(`斩杀被鸡的【司命】瞬时无敌挡下！`, 'special');
+    sfx('special');
+    return;
+  }
+  loser.hp = 0;
+  log(`${winner.isAI?'AI':'玩家'}使用【斩杀】→ 直接击杀！`, winner.isAI?'ai':'player');
+  sfx('special');
+  shakePanel(loser);
+}
+
+function doChickenExtend(p) {
+  // 延生 - only in dying state
+  if (!p.chickenDying) return;
+  // Treat as heal
+  healPlayer(p, 1);
+  log(`${p.isAI?'AI':'玩家'}使用【延生】→ 尝试治疗`, p.isAI?'ai':'player');
+  sfx('heal');
+  // The actual resolution will determine if heal saved them
+}
+
+// ==================== DAMAGE QUEUE ====================
+function queueDamage(target, amount, source, ignoreImmunity=false) {
+  const key = target.isAI ? 'ai' : 'player';
+  G.pendingDamage[key] += amount;
+  G.damageDetails[key].push({amount, source, ignoreImmunity});
+}
+
+// ==================== RESOLUTION ====================
+function resolveRound() {
+  const pAnimal = ZODIAC[G.player.level];
+  const aAnimal = ZODIAC[G.ai.level];
+
+  // 0. Save HP before damage for chicken's司命
+  // Don't overwrite if chicken is in dying state (preserve original pre-death HP)
+  if (!(pAnimal.name === '鸡' && G.player.chickenDying)) G.player.preDeathHp = G.player.hp;
+  if (!(aAnimal.name === '鸡' && G.ai.chickenDying)) G.ai.preDeathHp = G.ai.hp;
+
+  // 1. Apply poison damage (queued)
+  if (G.player.poisonMarks > 0) {
+    const dmg = G.player.poisonMarks;
+    queueDamage(G.player, dmg, '毒印记');
+    log(`玩家受到${dmg}点毒伤害(${G.player.poisonMarks}层)`, 'damage');
+  }
+  if (G.ai.poisonMarks > 0) {
+    const dmg = G.ai.poisonMarks;
+    queueDamage(G.ai, dmg, '毒印记');
+    log(`AI受到${dmg}点毒伤害(${G.ai.poisonMarks}层)`, 'damage');
+  }
+
+  // 2. Process all damage
+  processDamage(G.player, G.ai);
+  processDamage(G.ai, G.player);
+  // Process any reflected damage queued during the above (e.g. dragon's俯冲)
+  if (G.pendingDamage.player > 0) processDamage(G.player, G.ai);
+  if (G.pendingDamage.ai > 0) processDamage(G.ai, G.player);
+
+  // 3. Process healing
+  processHeal(G.player);
+  processHeal(G.ai);
+
+  // 4. Check death and handle special abilities
+  checkDeath(G.player, G.ai);
+  checkDeath(G.ai, G.player);
+  // If both died simultaneously, RPS winner (the attacker) barely survives
+  if (G.battleEnded && G.player.hp <= 0 && G.ai.hp <= 0) {
+    G.winner = G.rpsWinner === 'player' ? G.player : G.ai;
+    G.winner.hp = 1;
+    // Remove winner from dead list (they barely survived)
+    if (G.mode === 2) {
+      const winnerTeam = G.winner.isAI ? G.m2.ai : G.m2.player;
+      const idx = winnerTeam.dead.indexOf(winnerTeam.currentIdx);
+      if (idx >= 0) winnerTeam.dead.splice(idx, 1);
+    }
+    log(`${G.winner.isAI?'AI':'玩家'}同归于尽但险胜！(HP:1)`, 'win');
+  }
+
+  // 5. Update status effects
+  updateStatusEffects(G.player);
+  updateStatusEffects(G.ai);
+
+  // Clear oppressed active (pig's压迫② - was active this round)
+  G.player.oppressedActive = false;
+  G.ai.oppressedActive = false;
+
+  // 6. Check pig passive (shield triggers)
+  checkPigPassive(G.player);
+  checkPigPassive(G.ai);
+
+  // 7. Check win condition
+  if (G.battleEnded) {
+    if (G.mode === 2) {
+      // Mode 2: check if the losing team has more fighters
+      mode2HandleBattleEnd();
+    } else {
+      handleGameEnd();
+    }
+    return;
+  }
+
+  // 8. Check if monkey god form countdown should decrement
+  // (already handled at round start)
+
+  // Update UI
+  updateUI();
+  log(`--- 第${G.round}回合结束 ---`, 'system');
+
+  // Continue to next round
+  setTimeout(()=>beginRound(), 1500);
+}
+
+function processDamage(target, attacker) {
+  const key = target.isAI ? 'ai' : 'player';
+  let totalDmg = G.pendingDamage[key];
+
+  if (totalDmg <= 0) return;
+
+  // Separate ignoreImmunity damage from regular damage
+  let ignoreDmg = 0;
+  let regularDmg = 0;
+  for (const d of G.damageDetails[key]) {
+    if (d.ignoreImmunity) ignoreDmg += d.amount;
+    else regularDmg += d.amount;
+  }
+  G.damageDetails[key] = [];
+
+  // Apply shields to total damage (shields work against all damage)
+  if (target.shield > 0) {
+    const absorbed = Math.min(target.shield, totalDmg);
+    target.shield -= absorbed;
+    totalDmg -= absorbed;
+    // Recalculate split after shield absorption
+    const ratio = totalDmg > 0 ? 1 : 0;
+    if (totalDmg <= 0) {
+      log(`${target.isAI?'AI':'玩家'}护盾吸收${absorbed}伤害(剩余护盾:${target.shield})`, 'info');
+      G.pendingDamage[key] = 0;
+      return;
+    }
+    // Proportionally reduce both types
+    const shieldForIgnore = Math.min(absorbed, ignoreDmg);
+    ignoreDmg -= shieldForIgnore;
+    regularDmg -= (absorbed - shieldForIgnore);
+    log(`${target.isAI?'AI':'玩家'}护盾吸收${absorbed}伤害(剩余护盾:${target.shield})`, 'info');
+  }
+
+  // Check immunity (chicken's司命, dodge, etc.) - only blocks regular damage
+  if (target.immunityActive || target.dodgeActive || target.extremeDodge) {
+    if (regularDmg > 0) {
+      log(`${target.isAI?'AI':'玩家'}免疫${regularDmg}点伤害！`, 'info');
+    }
+    if (ignoreDmg > 0) {
+      log(`${target.isAI?'AI':'玩家'}无视免伤造成${ignoreDmg}点伤害！`, 'special');
+    }
+    totalDmg = ignoreDmg; // Only ignoreImmunity damage gets through
+    if (totalDmg <= 0) {
+      G.pendingDamage[key] = 0;
+      return;
+    }
+  }
+
+  // Check airborne (dragon's腾飞): damage capped at 1
+  if (target.isAirborne) {
+    const animal = ZODIAC[target.level];
+    if (totalDmg > 1) {
+      totalDmg = 1;
+      log(`${target.isAI?'AI':'玩家'}滞空状态：伤害减为1`, 'info');
+    }
+    // End airborne after taking damage
+    if (totalDmg > 0) {
+      target.isAirborne = false;
+      // Dragon passive: 俯冲 - can spend 1 HP to reflect
+      if (animal.name === '龙' && !target.judged) {
+        const reflectDmg = totalDmg;
+        target.hp -= 1; // spend 1 HP
+        queueDamage(attacker, reflectDmg, '反伤(俯冲)');
+        log(`${target.isAI?'AI':'玩家'}触发【俯冲】→ 扣1血反伤${reflectDmg}`, 'special');
+      }
+    }
+  }
+
+  // Monkey god form: 50% reduction (passive benefit, disabled by审判)
+  const targetAnimal = ZODIAC[target.level];
+  if (targetAnimal.name === '猴' && target.monkeyForm === 'god' && !target.judged) {
+    totalDmg = roundDownHalf(totalDmg * 0.5);
+    log(`${target.isAI?'AI':'玩家'}神格形态50%减伤：伤害${totalDmg}`, 'info');
+  }
+
+  // Monkey angry form: takes double damage
+  if (targetAnimal.name === '猴' && target.monkeyForm === 'angry') {
+    totalDmg *= 2;
+    log(`${target.isAI?'AI':'玩家'}愤怒形态：受到双倍伤害${totalDmg}`, 'info');
+  }
+
+  // Apply damage
+  target.hp -= totalDmg;
+  showDamagePopup(target, totalDmg);
+  log(`${target.isAI?'AI':'玩家'}受到${totalDmg}点伤害 → HP:${Math.max(0,target.hp).toFixed(1)}`, 'damage');
+  G.pendingDamage[key] = 0;
+}
+
+function processHeal(p) {
+  const key = p.isAI ? 'ai' : 'player';
+  let heal = G.pendingHeal[key];
+  if (heal <= 0) return;
+
+  const maxHp = getEffectiveMaxHp(p);
+  // Rat's饕餮: maxHp is Infinity, so this check is always false → no cap
+  if (maxHp !== Infinity && p.hp + heal > maxHp) {
+    heal = maxHp - p.hp;
+  }
+  if (heal > 0) {
+    p.hp += heal;
+    log(`${p.isAI?'AI':'玩家'}回复${heal}点血量 → HP:${p.hp.toFixed(1)}`, 'heal');
+    flashPanel(p, 'green');
+  }
+  // Clear chicken dying state if healed above 0
+  if (p.chickenDying && p.hp > 0) {
+    p.chickenDying = false;
+    log(`${p.isAI?'AI':'玩家'}退出濒死状态！`, 'special');
+  }
+  G.pendingHeal[key] = 0;
+}
+
+function checkDeath(target, attacker) {
+  if (target.hp <= 0) {
+    const animal = ZODIAC[target.level];
+
+    // Chicken's延生/司命
+    if (animal.name === '鸡') {
+      if (target.chickenDying) {
+        // In dying state, check if延生 was used (heal queued)
+        // If heal brought HP above 0, they survive
+        if (target.hp > 0) {
+          target.chickenDying = false;
+          log(`${target.isAI?'AI':'玩家'}退出濒死状态！`, 'special');
+          return;
+        }
+        //延生 failed or not used → 司命
+        if (!target.chickenS命Used) {
+          target.chickenS命Used = true;
+          target.hp = target.preDeathHp;
+          target.chickenImmunity = 2; // next 2 rounds immunity (activated in beginRound)
+          log(`${target.isAI?'AI':'玩家'}触发【司命】→ 恢复至死亡前血量${target.hp.toFixed(1)}，之后2回合免伤+普攻2.5`, 'special');
+          sfx('special');
+          return;
+        }
+      } else {
+        // First death → enter dying state
+        target.chickenDying = true;
+        // preDeathHp already saved in resolveRound before damage
+        target.hp = 0;
+        log(`${target.isAI?'AI':'玩家'}进入濒死状态！下回合可使用【延生】`, 'special');
+        // Don't end game yet - chicken gets one more round
+        // Actually, the rules say chicken can continue for one more round
+        // If延生 succeeds, they survive. If not, 司命 triggers.
+        // For simplicity, let's auto-handle: if AI, use延生 if possible
+        // If player, they'll get a chance next round
+        return;
+      }
+    }
+
+    // Normal death
+    if (!G.battleEnded) {
+      G.battleEnded = true;
+      G.winner = attacker;
+    }
+    log(`${target.isAI?'AI':'玩家'}被击败！`, 'win');
+    // Mode 2: handle team battle fighter death
+    if (G.mode === 2) {
+      mode2FighterDeath(target, attacker);
+    }
+  }
+}
+
+function updateStatusEffects(p) {
+  // Clear dodge effects
+  p.dodgeActive = false;
+  p.extremeDodge = false;
+  // Don't clear immunityActive if chicken immunity is still active
+  if (p.chickenImmunity <= 0) {
+    p.immunityActive = false;
+  }
+}
+
+function checkPigPassive(p) {
+  const animal = ZODIAC[p.level];
+  if (animal.name !== '猪') return;
+  if (p.judged) return; // Dog's审判 disables passive benefits
+  if (!p.shieldTriggered6 && p.hp < 6) {
+    p.shieldTriggered6 = true;
+    p.shieldNext += 2;
+    log(`${p.isAI?'AI':'玩家'}【勇毅】触发：血量<6，下回合获2护盾`, 'special');
+  }
+  if (!p.shieldTriggered3 && p.hp < 3) {
+    p.shieldTriggered3 = true;
+    p.shieldNext += 1;
+    log(`${p.isAI?'AI':'玩家'}【勇毅】触发：血量<3，下回合获1护盾`, 'special');
+  }
+}
+
+// ==================== AI ACTION PHASE ====================
+function aiActionPhase() {
+  const winner = G.ai;
+  const loser = G.player;
+  const animal = ZODIAC[winner.level];
+
+  // Check if player goat control is active (player predicted 'lose' correctly)
+  if (G.player.goatControlActive) {
+    // Player controls AI's action
+    log('玩家操控AI行动！', 'player');
+    G.player.goatControlActive = false;
+    showPlayerControlButtons(winner, loser);
+    return;
+  }
+
+  setTimeout(()=>{
+    const action = aiDecideAction(winner, loser);
+    executeAIAction(winner, loser, action);
+  }, 1500);
+  showActionArea(`<span class="prompt-text">AI正在思考<span class="thinking"></span></span>`);
+}
+
+function showPlayerControlButtons(winner, loser) {
+  let buttons = [];
+  const atk = getAttack(winner);
+  const animal = ZODIAC[winner.level];
+  const healAmount = (G.mode === 2 && animal.name === '鼠') ? 2 : 1;
+
+  // If AI is oppressed, only normal attack
+  if (winner.oppressedActive) {
+    showActionArea(`<span class="prompt-text" style="color:var(--orange)">AI被压迫！只能普通攻击：</span>
+      <button class="action-btn attack" onclick="playerControlAI('attack')">
+        <span>普攻</span><span class="btn-desc">${atk}伤害</span>
+      </button>`);
+    return;
+  }
+
+  // If AI is hanging, only unhang
+  if (winner.isHanging) {
+    showActionArea(`<span class="prompt-text" style="color:var(--orange)">AI被上吊！只能下吊：</span>
+      <button class="action-btn heal" onclick="playerControlAI('unhang')">
+        <span>下吊</span><span class="btn-desc">解除上吊</span>
+      </button>`);
+    return;
+  }
+  buttons.push(`<button class="action-btn attack" onclick="playerControlAI('attack')">
+    <span>普攻</span><span class="btn-desc">${atk}伤害</span>
+  </button>`);
+  buttons.push(`<button class="action-btn heal" onclick="playerControlAI('heal')">
+    <span>治疗</span><span class="btn-desc">回${healAmount}血</span>
+  </button>`);
+
+  if (animal.name === '牛') {
+    buttons.push(`<button class="action-btn special" onclick="playerControlAI('special')">
+      <span>上吊</span><span class="btn-desc">0.5伤害+使敌方无法攻击</span>
+    </button>`);
+  } else if (animal.name === '兔' && winner.dodgeUses > 0) {
+    buttons.push(`<button class="action-btn special" onclick="playerControlAI('dodge')">
+      <span>闪避 (${winner.dodgeUses})</span><span class="btn-desc">RPS判定胜则免伤</span>
+    </button>`);
+  } else if (animal.name === '龙') {
+    buttons.push(`<button class="action-btn special" onclick="playerControlAI('special')">
+      <span>腾飞</span><span class="btn-desc">回0.5血+滞空(受伤≤1)</span>
+    </button>`);
+  } else if (animal.name === '蛇') {
+    buttons.push(`<button class="action-btn special" onclick="playerControlAI('poison')">
+      <span>放毒</span><span class="btn-desc">+1毒印记</span>
+    </button>`);
+  } else if (animal.name === '马') {
+    buttons.push(`<button class="action-btn special" onclick="playerControlAI('special')">
+      <span>旋踢</span><span class="btn-desc">1伤害+20%吸血</span>
+    </button>`);
+  } else if (animal.name === '猴') {
+    if (winner.monkeyForm === 'angry') {
+      buttons.push(`<button class="action-btn special" onclick="playerControlAI('monkey_burst')">
+        <span>暴击</span><span class="btn-desc">敌方血量减半</span>
+      </button>`);
+    }
+    if (winner.monkeyForm !== 'god') {
+      if (winner.monkeyForm === 'calm') {
+        buttons.push(`<button class="action-btn special" onclick="playerControlAI('switch_angry')">
+          <span>切换:愤怒</span><span class="btn-desc">普攻2,受双倍伤害</span>
+        </button>`);
+        buttons.push(`<button class="action-btn special" onclick="playerControlAI('switch_god')">
+          <span>切换:神格</span><span class="btn-desc">2回合倒计时,50%减伤,斩杀</span>
+        </button>`);
+      } else if (winner.monkeyForm === 'angry') {
+        buttons.push(`<button class="action-btn special" onclick="playerControlAI('switch_calm')">
+          <span>切换:平静</span><span class="btn-desc">普攻1+回1,无法特技</span>
+        </button>`);
+        buttons.push(`<button class="action-btn special" onclick="playerControlAI('switch_god')">
+          <span>切换:神格</span><span class="btn-desc">2回合倒计时,50%减伤,斩杀</span>
+        </button>`);
+      }
+    } else {
+      const canKill = loser.hp <= 4;
+      buttons.push(`<button class="action-btn special" ${canKill?'':'disabled'} onclick="playerControlAI('monkey_slash')">
+        <span>斩杀</span><span class="btn-desc">${canKill?'直接击杀':'需敌方HP≤4'}</span>
+      </button>`);
+    }
+  } else if (animal.name === '猪' && winner.oppressUses > 0) {
+    buttons.push(`<button class="action-btn special" onclick="playerControlAI('pig_oppress')">
+      <span>压迫 (${winner.oppressUses})</span><span class="btn-desc">5伤害+选择附加效果</span>
+    </button>`);
+  }
+
+  showActionArea(`<span class="prompt-text" style="color:var(--magenta)">操控AI行动：</span>` + buttons.join(''));
+}
+
+function playerControlAI(action) {
+  sfx('click');
+  const winner = G.ai;
+  const loser = G.player;
+  G.player.goatControlActive = false;
+
+  switch(action) {
+    case 'attack': doAttack(winner, loser); break;
+    case 'heal': doHeal(winner); break;
+    case 'special': doSpecial(winner, loser); break;
+    case 'dodge': doDodge(winner, false); break;
+    case 'extreme_dodge': doDodge(winner, true); break;
+    case 'poison': doPoison(winner, loser); break;
+    case 'explode': doExplode(winner, loser); break;
+    case 'unhang': doUnhang(winner); break;
+    case 'removepoison': doRemovePoison(winner); break;
+    case 'monkey_burst': doMonkeyBurst(winner, loser); break;
+    case 'switch_calm': doMonkeySwitch(winner, 'calm'); break;
+    case 'switch_angry': doMonkeySwitch(winner, 'angry'); break;
+    case 'switch_god': doMonkeySwitch(winner, 'god'); break;
+    case 'monkey_slash': doMonkeySlash(winner, loser); break;
+    case 'chicken_extend': doChickenExtend(winner); break;
+    case 'pig_oppress':
+      winner.oppressUses--;
+      let opt = 1;
+      if (loser.dodgeActive || loser.extremeDodge || loser.immunityActive) opt = 1;
+      else if (winner.hp < 4) opt = 3;
+      else opt = 2;
+      let dmg = opt === 3 ? 1 : 5;
+      if (opt === 1) queueDamage(loser, dmg, '压迫(无视免伤)', true);
+      else if (opt === 2) { queueDamage(loser, dmg, '压迫'); loser.oppressedNext = true; }
+      else { queueDamage(loser, dmg, '压迫'); winner.shield += 3; }
+      log(`玩家操控AI使用【压迫】：${dmg}伤害,效果${opt}`, 'player');
+      sfx('special'); shakePanel(loser);
+      break;
+  }
+  setTimeout(()=>resolveRound(), 800);
+}
+
+function aiDecideAction(winner, loser) {
+  const animal = ZODIAC[winner.level];
+  const atk = getAttack(winner);
+  const myHp = winner.hp;
+  let myMaxHp = getEffectiveMaxHp(winner);
+  if (myMaxHp === Infinity) myMaxHp = Math.max(winner.maxHp, winner.hp + 5); // Rat: use a reasonable reference
+  const enemyHp = loser.hp;
+
+  // If hanging, must unhang
+  if (winner.isHanging) {
+    return 'unhang';
+  }
+
+  // Chicken dying state: always use延生
+  if (animal.name === '鸡' && winner.chickenDying) {
+    return 'chicken_extend';
+  }
+
+  // Pig's压迫②: only normal attack
+  if (winner.oppressedActive) {
+    return 'attack';
+  }
+
+  // If hanging, must unh... wait, the winner is not hanging
+  // If winner is hanging, they can't attack and must unh... no, hanging prevents attacking
+  // The winner can still act even if they were hanging before
+
+  // If winner has poison and low HP, consider removing
+  if (winner.poisonMarks > 0 && myHp < myMaxHp * 0.3) {
+    return 'removepoison';
+  }
+
+  // If very low HP, heal
+  if (myHp <= 2 && myHp < myMaxHp * 0.3) {
+    return 'heal';
+  }
+
+  // If can kill with attack
+  if (enemyHp <= atk && !loser.dodgeActive && !loser.extremeDodge) {
+    return 'attack';
+  }
+
+  // Monkey god form: try斩杀
+  if (animal.name === '猴' && winner.monkeyForm === 'god' && enemyHp <= 4) {
+    return 'monkey_slash';
+  }
+  // Monkey god form: can't slash → heal instead of 0-damage attack
+  if (animal.name === '猴' && winner.monkeyForm === 'god') {
+    return 'heal';
+  }
+  if (animal.name === '猴') {
+    if (winner.monkeyForm === 'calm' && enemyHp <= 6) {
+      if (Math.random() < 0.4) return 'switch_god';
+      return 'switch_angry';
+    }
+    if (winner.monkeyForm === 'angry' && myHp <= 3) {
+      return 'switch_calm';
+    }
+    if (winner.monkeyForm === 'calm' && enemyHp > 6) {
+      return Math.random() < 0.3 ? 'switch_angry' : 'attack';
+    }
+    if (winner.monkeyForm === 'angry') {
+      return Math.random() < 0.4 ? 'monkey_burst' : 'attack';
+    }
+  }
+
+  // Snake: use poison if enemy has no poison
+  if (animal.name === '蛇') {
+    if (loser.poisonMarks < loser.maxPoison && Math.random() < 0.5) {
+      return 'poison';
+    }
+    if (loser.poisonMarks > 0 && !winner.snakeExplodeUsed && enemyHp <= loser.poisonMarks * 2) {
+      return 'explode';
+    }
+  }
+
+  // Pig: use压迫 if enemy low
+  if (animal.name === '猪' && winner.oppressUses > 0) {
+    if (enemyHp <= 5) return 'pig_oppress';
+    if (myHp < 4 && Math.random() < 0.5) return 'pig_oppress';
+  }
+
+  // Horse: use旋踢 when enemy has high HP (more lifesteal)
+  if (animal.name === '马' && enemyHp > 5 && myHp < myMaxHp * 0.7) {
+    return 'special';
+  }
+
+  // Dragon: use腾飞 when low HP
+  if (animal.name === '龙' && myHp < myMaxHp * 0.4 && !winner.isAirborne) {
+    return 'special';
+  }
+
+  // Ox: use上吊 sometimes
+  if (animal.name === '牛' && Math.random() < 0.4) {
+    return 'special';
+  }
+
+  // Default: attack or heal
+  if (myHp < myMaxHp * 0.4 && Math.random() < 0.4) {
+    return 'heal';
+  }
+  return 'attack';
+}
+
+function executeAIAction(winner, loser, action) {
+  sfx('click');
+  const animal = ZODIAC[winner.level];
+
+  switch(action) {
+    case 'attack':
+      // Check if player is rabbit and might want to dodge
+      const loserAnimal = ZODIAC[loser.level];
+      if (loserAnimal.name === '兔' && loser.dodgeUses > 0 && !loser.dodgeActive) {
+        // Ask player if they want to dodge
+        showRabbitDodgePrompt(winner, loser, 'attack');
+        return;
+      }
+      doAttack(winner, loser);
+      break;
+    case 'heal': doHeal(winner); break;
+    case 'special': doSpecial(winner, loser); break;
+    case 'poison': doPoison(winner, loser); break;
+    case 'explode': doExplode(winner, loser); break;
+    case 'removepoison': doRemovePoison(winner); break;
+    case 'unhang': doUnhang(winner); break;
+    case 'monkey_burst': doMonkeyBurst(winner, loser); break;
+    case 'switch_calm': doMonkeySwitch(winner, 'calm'); break;
+    case 'switch_angry': doMonkeySwitch(winner, 'angry'); break;
+    case 'switch_god': doMonkeySwitch(winner, 'god'); break;
+    case 'monkey_slash': doMonkeySlash(winner, loser); break;
+    case 'pig_oppress':
+      // AI chooses oppress option
+      let opt = 1;
+      if (loser.dodgeActive || loser.extremeDodge || loser.immunityActive) opt = 1;
+      else if (winner.hp < 4) opt = 3;
+      else if (Math.random() < 0.3) opt = 2;
+      // Simulate doPigOppress
+      winner.oppressUses--;
+      let dmg = 5;
+      if (opt === 1) { queueDamage(loser, dmg, '压迫(无视免伤)', true); }
+      else if (opt === 2) { queueDamage(loser, dmg, '压迫'); loser.oppressedNext = true; }
+      else { dmg = 1; queueDamage(loser, dmg, '压迫'); winner.shield += 3; }
+      log(`AI使用【压迫】：${dmg}伤害,效果${opt}`, 'ai');
+      sfx('special');
+      shakePanel(loser);
+      break;
+  }
+
+  setTimeout(()=>resolveRound(), 1000);
+}
+
+function showRabbitDodgePrompt(winner, loser, action) {
+  showActionArea(`
+    <span class="prompt-text" style="color:var(--magenta)">AI即将攻击！是否使用闪避？</span>
+    <button class="neon-btn magenta" onclick="playerRabbitDodge(false)">闪避 (${loser.dodgeUses})</button>
+    ${loser.dodgeUses >= 2 ? `<button class="neon-btn magenta" onclick="playerRabbitDodge(true)">极限闪避 (消耗2次)</button>` : ''}
+    <button class="neon-btn" onclick="playerRabbitDodge('skip')">不闪避</button>
+  `);
+}
+
+function playerRabbitDodge(extreme) {
+  sfx('click');
+  const loser = G.player;
+  if (extreme === 'skip') {
+    log('玩家选择不闪避', 'info');
+  } else {
+    doDodge(loser, extreme);
+  }
+  // Now execute the AI's attack
+  const winner = G.ai;
+  const loserObj = G.player;
+  doAttack(winner, loserObj);
+  setTimeout(()=>resolveRound(), 1000);
+}
+
+// ==================== GAME END ====================
+function handleGameEnd() {
+  const winner = G.winner;
+  const loser = winner === G.player ? G.ai : G.player;
+  const winnerName = winner.isAI ? 'AI' : '玩家';
+
+  // Mode 2: don't do level progression, handle team battle
+  if (G.mode === 2) {
+    // Check if the losing team has more fighters
+    const loserSide = loser.isAI ? G.m2.ai : G.m2.player;
+    if (loserSide.currentIdx < loserSide.deployed.length - 1) {
+      // Still have fighters left, but this individual fight is over
+      // This is handled in mode2FighterDeath
+      return;
+    }
+    // All fighters dead, the other side wins the entire match
+    sfx(winner === G.player ? 'win' : 'lose');
+    showOverlay(`
+      <h2 style="color:var(--green)">团队对战结束！</h2>
+      <p style="font-size:1.8em;">${winnerName} 获胜！</p>
+      <p style="color:var(--dim);margin:15px 0;">${winnerName}方剩余角色：${(winner.isAI?G.m2.ai:G.m2.player).deployed.length - (winner.isAI?G.m2.ai:G.m2.player).currentIdx}名</p>
+      <div class="btn-row">
+        <button class="neon-btn" onclick="restartGame()">再来一局</button>
+      </div>
+    `);
+    return;
+  }
+
+  sfx(winner === G.player ? 'win' : 'lose');
+
+  // Level up winner
+  const oldLevel = winner.level;
+  winner.level = Math.min(11, winner.level + 1);
+  const newAnimal = ZODIAC[winner.level];
+
+  log(`=== ${winnerName}获胜！升级：${ZODIAC[oldLevel].name} → ${newAnimal.name} ===`, 'win');
+
+  // Check final win (pig wins again)
+  if (oldLevel === 11) {
+    // Was pig, now would be 12 but there's no level 12
+    // Actually, pig is level 12 (index 11). If pig wins, they are the final winner.
+    // Wait, re-reading: "若一方为'猪'并又获得了一局游戏的胜利，则其为最终胜者"
+    // So if the winner was already pig and wins another game, they are the final winner
+    // But pig is level 12 (index 11). If they win, they can't level up further.
+    // So the check should be: if old level is pig (11) and they win, final victory
+    showFinalWin(winnerName);
+    return;
+  }
+
+  sfx('levelup');
+  showOverlay(`
+    <h2>${winnerName} 获胜！</h2>
+    <p style="font-size:1.5em;color:var(--green)">${ZODIAC[oldLevel].emoji} ${ZODIAC[oldLevel].name} → ${newAnimal.emoji} ${newAnimal.name}</p>
+    <p style="color:var(--dim);margin-top:15px;">${newAnimal.passive ? '被动：' + newAnimal.passive : ''}</p>
+    ${newAnimal.special && newAnimal.special !== '无' ? `<p style="color:var(--magenta);">特技：${newAnimal.special}</p>` : ''}
+    <div class="btn-row">
+      <button class="neon-btn" onclick="continueGame()">继续下一局</button>
+    </div>
+  `);
+}
+
+function showFinalWin(winnerName) {
+  sfx(winnerName === '玩家' ? 'win' : 'lose');
+  showOverlay(`
+    <h2 style="color:var(--green)">最终胜利！</h2>
+    <p style="font-size:2em;">🐷 ${winnerName} 达到猪级并再次获胜！</p>
+    <p style="color:var(--dim);margin:20px 0;">十二生肖之旅完结！</p>
+    <div class="btn-row">
+      <button class="neon-btn" onclick="restartGame()">再来一局</button>
+    </div>
+  `);
+}
+
+function continueGame() {
+  hideOverlay();
+  sfx('click');
+  startNewGame();
+}
+
+function restartGame() {
+  hideOverlay();
+  sfx('click');
+  document.getElementById('title-screen').style.display = 'flex';
+  document.getElementById('game-screen').style.display = 'none';
+}
+
+// ==================== UI ====================
+function showActionArea(html) {
+  document.getElementById('action-area').innerHTML = html;
+}
+
+function showOverlay(html) {
+  document.getElementById('overlay-content').innerHTML = html;
+  document.getElementById('overlay').classList.add('show');
+}
+
+function hideOverlay() {
+  document.getElementById('overlay').classList.remove('show');
+}
+
+function shakePanel(p) {
+  const el = document.getElementById(p.isAI ? 'ai-panel' : 'player-panel');
+  el.classList.add('shake');
+  setTimeout(()=>el.classList.remove('shake'), 500);
+}
+
+function flashPanel(p, color) {
+  const el = document.getElementById(p.isAI ? 'ai-panel' : 'player-panel');
+  el.classList.add('flash');
+  setTimeout(()=>el.classList.remove('flash'), 300);
+}
+
+function showDamagePopup(p, amount) {
+  if (amount <= 0) return;
+  const panel = document.getElementById(p.isAI ? 'ai-panel' : 'player-panel');
+  const popup = document.createElement('div');
+  popup.className = 'damage-popup';
+  popup.textContent = `-${amount}`;
+  popup.style.color = 'var(--pink)';
+  popup.style.left = '50%';
+  popup.style.top = '30%';
+  popup.style.transform = 'translateX(-50%)';
+  panel.appendChild(popup);
+  setTimeout(()=>popup.remove(), 1500);
+}
+
+function updateUI() {
+  // Player
+  const pAnimal = ZODIAC[G.player.level];
+  document.getElementById('player-animal').textContent = pAnimal.emoji;
+  document.getElementById('player-animal-name').textContent = pAnimal.name;
+  document.getElementById('player-level').textContent = G.mode === 2 ? '' : `Lv.${G.player.level + 1}`;
+  const pMaxHp = getEffectiveMaxHp(G.player);
+  const pDisplayMax = pMaxHp === Infinity ? Math.max(G.player.maxHp, G.player.hp) : pMaxHp;
+  const pHpPct = Math.max(0, Math.min(100, (G.player.hp / pDisplayMax) * 100));
+  document.getElementById('player-hp-fill').style.width = pHpPct + '%';
+  document.getElementById('player-hp-text').textContent = `${Math.max(0,G.player.hp).toFixed(1)}/${pMaxHp === Infinity ? '∞' : pMaxHp.toFixed(0)}`;
+  updateStatusDisplay('player-status', G.player);
+  updateSpecialInfo('player-special-info', G.player);
+
+  // AI
+  const aAnimal = ZODIAC[G.ai.level];
+  document.getElementById('ai-animal').textContent = aAnimal.emoji;
+  document.getElementById('ai-animal-name').textContent = aAnimal.name;
+  document.getElementById('ai-level').textContent = G.mode === 2 ? '' : `Lv.${G.ai.level + 1}`;
+  const aMaxHp = getEffectiveMaxHp(G.ai);
+  const aDisplayMax = aMaxHp === Infinity ? Math.max(G.ai.maxHp, G.ai.hp) : aMaxHp;
+  const aHpPct = Math.max(0, Math.min(100, (G.ai.hp / aDisplayMax) * 100));
+  document.getElementById('ai-hp-fill').style.width = aHpPct + '%';
+  document.getElementById('ai-hp-text').textContent = `${Math.max(0,G.ai.hp).toFixed(1)}/${aMaxHp === Infinity ? '∞' : aMaxHp.toFixed(0)}`;
+  updateStatusDisplay('ai-status', G.ai);
+  updateSpecialInfo('ai-special-info', G.ai);
+
+  // Round info
+  if (G.mode === 2 && G.m2) {
+    const pCount = G.m2.player.dead.length;
+    const aCount = G.m2.ai.dead.length;
+    document.getElementById('round-info').textContent = `第${G.round}回合 · ${pAnimal.name} vs ${aAnimal.name} · 阵亡 ${pCount}/4 vs ${aCount}/4`;
+  } else {
+    document.getElementById('round-info').textContent = `第 ${G.round} 回合 · ${pAnimal.name} vs ${aAnimal.name}`;
+  }
+}
+
+function updateStatusDisplay(elementId, p) {
+  const el = document.getElementById(elementId);
+  let tags = [];
+  if (p.poisonMarks > 0) tags.push(`<span class="status-tag poison">毒 ×${p.poisonMarks}</span>`);
+  if (p.isHanging) tags.push(`<span class="status-tag hanging">上吊</span>`);
+  if (p.isAirborne) tags.push(`<span class="status-tag airborne">滞空</span>`);
+  if (p.shield > 0) tags.push(`<span class="status-tag shield">护盾 ${p.shield}</span>`);
+  if (p.dodgeActive) tags.push(`<span class="status-tag dodge">闪避中</span>`);
+  if (p.extremeDodge) tags.push(`<span class="status-tag dodge">极限闪避</span>`);
+  if (p.immunityActive) {
+    const animal2 = ZODIAC[p.level];
+    if (animal2.name === '鸡') tags.push(`<span class="status-tag immune">司命免伤</span>`);
+    else tags.push(`<span class="status-tag immune">免伤</span>`);
+  }
+  if (p.chickenDying) tags.push(`<span class="status-tag dying">濒死</span>`);
+  const animal = ZODIAC[p.level];
+  if (animal.name === '猴') {
+    if (p.monkeyForm === 'calm') tags.push(`<span class="status-tag calm">平静</span>`);
+    else if (p.monkeyForm === 'angry') tags.push(`<span class="status-tag angry">愤怒</span>`);
+    else if (p.monkeyForm === 'god') tags.push(`<span class="status-tag god">神格(${p.godCountdown})</span>`);
+  }
+  el.innerHTML = tags.join('');
+}
+
+function updateSpecialInfo(elementId, p) {
+  const el = document.getElementById(elementId);
+  const animal = ZODIAC[p.level];
+  let info = [];
+  if (animal.name === '兔' && p.dodgeUses > 0) info.push(`<span class="use-count">闪避:${p.dodgeUses}</span>`);
+  if (animal.name === '羊' && p.divineUses > 0) info.push(`<span class="use-count">占卜:${p.divineUses}</span>`);
+  if (animal.name === '狗' && p.judgeUses > 0) info.push(`<span class="use-count">审判:${p.judgeUses}</span>`);
+  if (animal.name === '猪' && p.oppressUses > 0) info.push(`<span class="use-count">压迫:${p.oppressUses}</span>`);
+  if (animal.name === '蛇') info.push(`<span class="use-count">引爆:${p.snakeExplodeUsed?'已用':'可用'}</span>`);
+  if (animal.name === '狗' && !p.dogTraceUsed && p.dogTieCount > 0) info.push(`<span class="use-count">平局:${p.dogTieCount}/3</span>`);
+  el.innerHTML = info.join(' | ');
+}
+
+// ==================== MODE 2: TEAM BATTLE ====================
+function startMode2() {
+  G.m2 = {
+    phase: 'team_select_rps',
+    availableAnimals: Array.from({length:12}, (_,i) => i),
+    playerTeam: [],
+    aiTeam: [],
+    playerBanned: [],
+    aiBanned: [],
+    playerDeployed: [],
+    aiDeployed: [],
+    pickOrder: null,
+    pickIdx: 0,
+    banRound: 0,
+    banWinners: [],
+    deployOrder: null,
+    deployIsPlayerRed: null,
+    deployStep: 0,
+    player: { currentIdx: 0, dead: [] },
+    ai: { currentIdx: 0, dead: [] },
+  };
+
+  // Show the team roster panels
+  document.getElementById('player-roster').style.display = 'flex';
+  document.getElementById('ai-roster').style.display = 'flex';
+
+  log('选人阶段：先进行剪刀石头布，胜者先选', 'system');
+  mode2TeamSelectRPS();
+}
+
+function mode2TeamSelectRPS() {
+  G.m2.phase = 'team_select_rps';
+  showActionArea(`
+    <span class="prompt-text">选人阶段 · 选择出招（胜者先选角色）：</span>
+    <button class="rps-btn" onclick="mode2TeamSelectRPSResolve('rock')">✊</button>
+    <button class="rps-btn" onclick="mode2TeamSelectRPSResolve('paper')">✋</button>
+    <button class="rps-btn" onclick="mode2TeamSelectRPSResolve('scissors')">✌️</button>
+  `);
+}
+
+function mode2TeamSelectRPSResolve(choice) {
+  sfx('rps');
+  document.querySelectorAll('.rps-btn').forEach(btn => btn.disabled = true);
+  const aiChoice = ['rock','paper','scissors'][Math.floor(Math.random()*3)];
+  const beats = {rock:'scissors', paper:'rock', scissors:'paper'};
+
+  const pEl = document.getElementById('player-rps');
+  const aEl = document.getElementById('ai-rps');
+  pEl.textContent = RPS[choice];
+  aEl.textContent = RPS[aiChoice];
+  pEl.classList.add('show');
+  setTimeout(()=>aEl.classList.add('show'), 300);
+
+  setTimeout(()=>{
+    pEl.classList.remove('show');
+    aEl.classList.remove('show');
+
+    if (choice === aiChoice) {
+      log('选人RPS平局，再来一次', 'info');
+      mode2TeamSelectRPS();
+      return;
+    }
+
+    const playerWins = beats[choice] === aiChoice;
+    G.m2.pickOrder = playerWins ? 'player' : 'ai';
+    log(`${playerWins?'玩家':'AI'}赢得RPS，先选角色`, playerWins?'player':'ai');
+    sfx(playerWins?'win':'lose');
+
+    G.m2.phase = 'team_select';
+    mode2TeamSelectNext();
+  }, 1200);
+}
+
+function mode2TeamSelectNext() {
+  const m2 = G.m2;
+  if (m2.playerTeam.length >= 6 && m2.aiTeam.length >= 6) {
+    log('选人完成！双方各6名角色', 'system');
+    mode2StartBanPhase();
+    return;
+  }
+
+  const isPlayerTurn = m2.pickOrder === 'player'
+    ? (m2.playerTeam.length <= m2.aiTeam.length)
+    : (m2.aiTeam.length <= m2.playerTeam.length);
+
+  // Check if one side already has 6
+  if (m2.playerTeam.length >= 6) {
+    mode2AITeamPick();
+    return;
+  }
+  if (m2.aiTeam.length >= 6) {
+    mode2TeamSelectShowGrid();
+    return;
+  }
+
+  if (isPlayerTurn) {
+    mode2TeamSelectShowGrid();
+  } else {
+    mode2AITeamPick();
+  }
+}
+
+function mode2TeamSelectShowGrid() {
+  const m2 = G.m2;
+  let cards = '';
+  for (let i = 0; i < 12; i++) {
+    const picked = m2.playerTeam.includes(i) || m2.aiTeam.includes(i);
+    const byPlayer = m2.playerTeam.includes(i);
+    const byAI = m2.aiTeam.includes(i);
+    let cls = 'animal-card';
+    if (picked) {
+      cls += byPlayer ? ' picked-by-player' : ' picked-by-ai';
+      cls += ' picked';
+    } else {
+      cls += ' selectable';
+    }
+    cards += `<div class="${cls}" ${picked?'':'onclick="mode2TeamPick('+i+')"'}>
+      <span class="emoji">${ZODIAC[i].emoji}</span>
+      <span class="name">${ZODIAC[i].name}</span>
+    </div>`;
+  }
+
+  showOverlay(`
+    <h2>选人阶段</h2>
+    <p style="color:var(--cyan)">玩家: ${m2.playerTeam.length}/6</p>
+    <p style="color:var(--pink)">AI: ${m2.aiTeam.length}/6</p>
+    <div class="select-grid">${cards}</div>
+    <p style="color:var(--dim);font-size:0.85em">点击未选中的角色加入你的队伍</p>
+  `);
+}
+
+function mode2TeamPick(idx) {
+  sfx('click');
+  const m2 = G.m2;
+  if (m2.playerTeam.includes(idx) || m2.aiTeam.includes(idx)) return;
+  m2.playerTeam.push(idx);
+  log(`玩家选择了 ${ZODIAC[idx].emoji} ${ZODIAC[idx].name}`, 'player');
+  updateMode2Rosters();
+  hideOverlay();
+  setTimeout(()=>mode2AITeamPick(), 800);
+}
+
+function mode2AITeamPick() {
+  const m2 = G.m2;
+  if (m2.aiTeam.length >= 6) {
+    mode2TeamSelectNext();
+    return;
+  }
+  // AI picks: avoid what player picked, pick strong animals
+  const available = m2.availableAnimals.filter(i => !m2.playerTeam.includes(i) && !m2.aiTeam.includes(i));
+  // Simple strategy: pick higher-level animals preferentially
+  const sorted = [...available].sort((a,b) => Math.random() - 0.3 + (b - a) * 0.1);
+  const pick = sorted[0];
+  m2.aiTeam.push(pick);
+  log(`AI选择了 ${ZODIAC[pick].emoji} ${ZODIAC[pick].name}`, 'ai');
+  updateMode2Rosters();
+  setTimeout(()=>{
+    if (m2.playerTeam.length >= 6 && m2.aiTeam.length >= 6) {
+      mode2StartBanPhase();
+    } else {
+      mode2TeamSelectNext();
+    }
+  }, 800);
+}
+
+function mode2StartBanPhase() {
+  const m2 = G.m2;
+  m2.phase = 'ban_rps';
+  m2.banRound = 0;
+  log('BP阶段：进行两次剪刀石头布，胜者各禁对方1名', 'system');
+  mode2BanRPS();
+}
+
+function mode2BanRPS() {
+  const m2 = G.m2;
+  if (m2.banRound >= 2) {
+    log('BP阶段结束', 'system');
+    mode2StartDeployPhase();
+    return;
+  }
+
+  m2.phase = 'ban_rps';
+  showActionArea(`
+    <span class="prompt-text">BP第${m2.banRound+1}轮 · 选择出招（胜者禁对方1名）：</span>
+    <button class="rps-btn" onclick="mode2BanRPSResolve('rock')">✊</button>
+    <button class="rps-btn" onclick="mode2BanRPSResolve('paper')">✋</button>
+    <button class="rps-btn" onclick="mode2BanRPSResolve('scissors')">✌️</button>
+  `);
+}
+
+function mode2BanRPSResolve(choice) {
+  sfx('rps');
+  document.querySelectorAll('.rps-btn').forEach(btn => btn.disabled = true);
+  const aiChoice = ['rock','paper','scissors'][Math.floor(Math.random()*3)];
+  const beats = {rock:'scissors', paper:'rock', scissors:'paper'};
+
+  const pEl = document.getElementById('player-rps');
+  const aEl = document.getElementById('ai-rps');
+  pEl.textContent = RPS[choice];
+  aEl.textContent = RPS[aiChoice];
+  pEl.classList.add('show');
+  setTimeout(()=>aEl.classList.add('show'), 300);
+
+  setTimeout(()=>{
+    pEl.classList.remove('show');
+    aEl.classList.remove('show');
+
+    if (choice === aiChoice) {
+      log('BP RPS平局，再来一次', 'info');
+      mode2BanRPS();
+      return;
+    }
+
+    const playerWins = beats[choice] === aiChoice;
+    const m2 = G.m2;
+    m2.banWinners.push(playerWins ? 'player' : 'ai');
+    log(`${playerWins?'玩家':'AI'}赢得第${m2.banRound+1}轮BP，可禁对方1名`, playerWins?'player':'ai');
+    sfx(playerWins?'win':'lose');
+
+    m2.banRound++;
+    m2.phase = 'ban_pick';
+
+    if (playerWins) {
+      mode2BanPickShow();
+    } else {
+      mode2AIBanPick();
+    }
+  }, 1200);
+}
+
+function mode2BanPickShow() {
+  const m2 = G.m2;
+  let cards = '';
+  m2.aiTeam.forEach(idx => {
+    const banned = m2.aiBanned.includes(idx);
+    let cls = 'team-char bannable';
+    if (banned) cls += ' banned';
+    cards += `<div class="${cls}" ${banned?'':'onclick="mode2BanPick('+idx+')"'}
+      style="border-color:var(--pink)">
+      <span class="emoji">${ZODIAC[idx].emoji}</span>
+      <span>${ZODIAC[idx].name}</span>
+    </div>`;
+  });
+
+  showOverlay(`
+    <h2>禁用阶段</h2>
+    <p style="color:var(--orange)">选择要禁用的AI角色：</p>
+    <div class="team-display">${cards}</div>
+  `);
+}
+
+function mode2BanPick(idx) {
+  sfx('special');
+  const m2 = G.m2;
+  m2.aiBanned.push(idx);
+  log(`玩家禁用了AI的 ${ZODIAC[idx].emoji} ${ZODIAC[idx].name}`, 'player');
+  updateMode2Rosters();
+  hideOverlay();
+  setTimeout(()=>mode2BanRPS(), 800);
+}
+
+function mode2AIBanPick() {
+  const m2 = G.m2;
+  // AI bans a strong player character
+  const available = m2.playerTeam.filter(i => !m2.playerBanned.includes(i));
+  // Ban the highest level one
+  const sorted = [...available].sort((a,b) => b - a);
+  const ban = sorted[0];
+  m2.playerBanned.push(ban);
+  log(`AI禁用了玩家的 ${ZODIAC[ban].emoji} ${ZODIAC[ban].name}`, 'ai');
+  sfx('special');
+  updateMode2Rosters();
+  setTimeout(()=>mode2BanRPS(), 800);
+}
+
+function mode2StartDeployPhase() {
+  const m2 = G.m2;
+  m2.phase = 'deploy_rps';
+  log('排兵布阵阶段：先进行RPS，胜者为红方', 'system');
+  mode2DeployRPS();
+}
+
+function mode2DeployRPS() {
+  const m2 = G.m2;
+  showActionArea(`
+    <span class="prompt-text">排兵布阵 · 选择出招（胜者=红方，败者=蓝方）：</span>
+    <button class="rps-btn" onclick="mode2DeployRPSResolve('rock')">✊</button>
+    <button class="rps-btn" onclick="mode2DeployRPSResolve('paper')">✋</button>
+    <button class="rps-btn" onclick="mode2DeployRPSResolve('scissors')">✌️</button>
+  `);
+}
+
+function mode2DeployRPSResolve(choice) {
+  sfx('rps');
+  document.querySelectorAll('.rps-btn').forEach(btn => btn.disabled = true);
+  const aiChoice = ['rock','paper','scissors'][Math.floor(Math.random()*3)];
+  const beats = {rock:'scissors', paper:'rock', scissors:'paper'};
+
+  const pEl = document.getElementById('player-rps');
+  const aEl = document.getElementById('ai-rps');
+  pEl.textContent = RPS[choice];
+  aEl.textContent = RPS[aiChoice];
+  pEl.classList.add('show');
+  setTimeout(()=>aEl.classList.add('show'), 300);
+
+  setTimeout(()=>{
+    pEl.classList.remove('show');
+    aEl.classList.remove('show');
+
+    if (choice === aiChoice) {
+      log('排兵RPS平局，再来一次', 'info');
+      mode2DeployRPS();
+      return;
+    }
+
+    const playerWins = beats[choice] === aiChoice;
+    const m2 = G.m2;
+    m2.deployIsPlayerRed = playerWins;
+    // Draft order: R(1) B(2) R(2) B(2) R(1) = 8 picks, 4 each
+    m2.deployOrder = [];
+    const red = playerWins ? 'player' : 'ai';
+    const blue = playerWins ? 'ai' : 'player';
+    m2.deployOrder.push({side: red, count: 1});
+    m2.deployOrder.push({side: blue, count: 2});
+    m2.deployOrder.push({side: red, count: 2});
+    m2.deployOrder.push({side: blue, count: 2});
+    m2.deployOrder.push({side: red, count: 1});
+    m2.deployStep = 0;
+
+    log(`${playerWins?'玩家':'AI'}为红方，${playerWins?'AI':'玩家'}为蓝方`, 'system');
+    log('选秀顺序：红1→蓝2→红2→蓝2→红1', 'system');
+
+    m2.phase = 'deploy_pick';
+    mode2DeployNext();
+  }, 1200);
+}
+
+function mode2DeployNext() {
+  const m2 = G.m2;
+  if (m2.deployStep >= m2.deployOrder.length) {
+    log('排兵布阵完成！双方各4名角色', 'system');
+    mode2StartBattle();
+    return;
+  }
+
+  const step = m2.deployOrder[m2.deployStep];
+  const isPlayerTurn = step.side === 'player';
+
+  // Build draft order display
+  let orderHtml = '<div class="draft-order">';
+  for (let i = 0; i < m2.deployOrder.length; i++) {
+    const s = m2.deployOrder[i];
+    const isRed = s.side === (m2.deployIsPlayerRed ? 'player' : 'ai');
+    let cls = isRed ? 'step red' : 'step blue';
+    if (i < m2.deployStep) cls += ' done';
+    if (i === m2.deployStep) cls += ' current';
+    const label = isRed ? '红' : '蓝';
+    orderHtml += `<span class="${cls}">${label}×${s.count}</span>`;
+  }
+  orderHtml += '</div>';
+
+  if (isPlayerTurn) {
+    mode2DeployShowPlayer(orderHtml, step.count);
+  } else {
+    showOverlay(`
+      <h2>AI排兵中...</h2>
+      ${orderHtml}
+      <p style="color:var(--dim)">AI正在选择角色...</p>
+    `);
+    setTimeout(()=>mode2AIDeployPick(step.count), 1200);
+  }
+}
+
+function mode2DeployShowPlayer(orderHtml, count) {
+  const m2 = G.m2;
+  // Always rebuild draft order if not provided
+  if (!orderHtml) {
+    orderHtml = '<div class="draft-order">';
+    for (let i = 0; i < m2.deployOrder.length; i++) {
+      const s = m2.deployOrder[i];
+      const isRed = s.side === (m2.deployIsPlayerRed ? 'player' : 'ai');
+      let cls = isRed ? 'step red' : 'step blue';
+      if (i < m2.deployStep) cls += ' done';
+      if (i === m2.deployStep) cls += ' current';
+      const label = isRed ? '红' : '蓝';
+      orderHtml += `<span class="${cls}">${label}×${s.count}</span>`;
+    }
+    orderHtml += '</div>';
+  }
+  const available = m2.playerTeam.filter(i => !m2.playerBanned.includes(i) && !m2.playerDeployed.includes(i));
+  let cards = '';
+  available.forEach(idx => {
+    cards += `<div class="animal-card selectable" onclick="mode2DeployPick(${idx})">
+      <span class="emoji">${ZODIAC[idx].emoji}</span>
+      <span class="name">${ZODIAC[idx].name}</span>
+    </div>`;
+  });
+
+  showOverlay(`
+    <h2>排兵布阵 · 已选${m2.playerDeployed.length}/4</h2>
+    ${orderHtml}
+    <p style="color:var(--cyan)">本次还需选${count}名</p>
+    <div class="select-grid">${cards}</div>
+  `);
+}
+
+function mode2DeployPick(idx) {
+  sfx('click');
+  const m2 = G.m2;
+  if (m2.playerDeployed.includes(idx)) return;
+  m2.playerDeployed.push(idx);
+  log(`玩家派出 ${ZODIAC[idx].emoji} ${ZODIAC[idx].name} (第${m2.playerDeployed.length}位)`, 'player');
+  updateMode2Rosters();
+
+  const step = m2.deployOrder[m2.deployStep];
+  const picksNeeded = step.count;
+  const playerPicksInStep = countPicksInStep(m2, m2.deployStep, 'player');
+  if (playerPicksInStep < picksNeeded) {
+    const remaining = picksNeeded - playerPicksInStep;
+    mode2DeployShowPlayer(null, remaining);
+  } else {
+    m2.deployStep++;
+    setTimeout(()=>mode2DeployNext(), 600);
+  }
+}
+
+function getPicksBeforeStep(step, side) {
+  let count = 0;
+  for (let i = 0; i < step; i++) {
+    if (G.m2.deployOrder[i].side === side) count += G.m2.deployOrder[i].count;
+  }
+  return count;
+}
+
+function countPicksInStep(m2, step, side) {
+  if (m2.deployOrder[step].side !== side) return 0;
+  const before = getPicksBeforeStep(step, side);
+  const deployed = side === 'player' ? m2.playerDeployed.length : m2.aiDeployed.length;
+  return deployed - before;
+}
+
+function mode2AIDeployPick(count) {
+  const m2 = G.m2;
+  const available = m2.aiTeam.filter(i => !m2.aiBanned.includes(i) && !m2.aiDeployed.includes(i));
+  // AI picks: somewhat strategic - mix of strong and strategic
+  const sorted = [...available].sort(() => Math.random() - 0.5);
+
+  for (let i = 0; i < count && sorted.length > 0; i++) {
+    const pick = sorted.shift();
+    m2.aiDeployed.push(pick);
+    log(`AI派出 ${ZODIAC[pick].emoji} ${ZODIAC[pick].name} (第${m2.aiDeployed.length}位)`, 'ai');
+  }
+
+  updateMode2Rosters();
+  m2.deployStep++;
+  setTimeout(()=>mode2DeployNext(), 800);
+}
+
+function mode2StartBattle() {
+  hideOverlay();
+  const m2 = G.m2;
+  m2.phase = 'battle';
+  m2.player.currentIdx = 0;
+  m2.ai.currentIdx = 0;
+  m2.player.dead = [];
+  m2.ai.dead = [];
+
+  log('=== 团队战开始 ===', 'system');
+  log(`玩家阵容: ${m2.playerDeployed.map(i => ZODIAC[i].emoji+ZODIAC[i].name).join(' → ')}`, 'player');
+  log(`AI阵容: ${m2.aiDeployed.map(i => ZODIAC[i].emoji+ZODIAC[i].name).join(' → ')}`, 'ai');
+
+  // Set up first fighters - set levels first, then HP
+  G.player.level = m2.playerDeployed[0];
+  G.ai.level = m2.aiDeployed[0];
+  resetForNewGame(G.player);
+  resetForNewGame(G.ai);
+  setupHpForNewGame(G.player, G.ai);
+  setupHpForNewGame(G.ai, G.player);
+  // Set monkey form for monkey fighters
+  if (ZODIAC[G.player.level].name === '猴') G.player.monkeyForm = 'calm';
+  if (ZODIAC[G.ai.level].name === '猴') G.ai.monkeyForm = 'calm';
+  log(`玩家派出 ${ZODIAC[G.player.level].emoji} ${ZODIAC[G.player.level].name} 上场！`, 'player');
+  log(`AI派出 ${ZODIAC[G.ai.level].emoji} ${ZODIAC[G.ai.level].name} 上场！`, 'ai');
+  sfx('levelup');
+
+  G.round = 0;
+  G.battleEnded = false;
+  updateMode2Rosters();
+  updateUI();
+
+  // AI snake awakening (handled before player check so it's not skipped)
+  const aiAnimal = ZODIAC[G.ai.level];
+  if (aiAnimal.name === '蛇') {
+    G.ai.snakeAwakened = Math.random() < 0.4;
+    G.ai.maxPoison = G.ai.snakeAwakened ? 3 : 2;
+    if (G.ai.snakeAwakened) {
+      G.ai.maxHp = 6; G.ai.hp = 6;
+      log('AI蛇进入觉醒状态', 'ai');
+    }
+  }
+
+  // Player snake awakening
+  const pAnimal = ZODIAC[G.player.level];
+  if (pAnimal.name === '蛇') {
+    showSnakeAwakeningChoice();
+    return;
+  }
+
+  setTimeout(()=>beginRound(), 1500);
+}
+
+function setupMode2Fighter(playerObj, teamState, opponentObj) {
+  const idx = teamState.deployed[teamState.currentIdx];
+  playerObj.level = idx;
+  resetForNewGame(playerObj);
+  const oppIdx = opponentObj.level !== undefined ? opponentObj.level : teamState.deployed[teamState.currentIdx];
+  setupHpForNewGame(playerObj, opponentObj);
+  log(`${playerObj.isAI?'AI':'玩家'}派出 ${ZODIAC[idx].emoji} ${ZODIAC[idx].name} 上场！`, playerObj.isAI?'ai':'player');
+  sfx('levelup');
+}
+
+function mode2FighterDeath(deadFighter, killer) {
+  // This is called from checkDeath when a fighter dies
+  const m2 = G.m2;
+  const teamState = deadFighter.isAI ? m2.ai : m2.player;
+  teamState.dead.push(teamState.currentIdx);
+  log(`${ZODIAC[deadFighter.level].emoji} ${ZODIAC[deadFighter.level].name} (${deadFighter.isAI?'AI':'玩家'})阵亡！`, 'special');
+  sfx('hit');
+}
+
+function mode2HandleBattleEnd() {
+  const m2 = G.m2;
+  const loser = G.winner === G.player ? G.ai : G.player;
+  const loserTeam = loser.isAI ? m2.ai : m2.player;
+  const winnerTeam = G.winner.isAI ? m2.ai : m2.player;
+  const winnerName = G.winner.isAI ? 'AI' : '玩家';
+  const loserName = loser.isAI ? 'AI' : '玩家';
+  const winner = G.winner;
+
+  // Check if loser has more fighters
+  if (loserTeam.currentIdx < loserTeam.deployed.length - 1) {
+    // Bring in the next fighter
+    loserTeam.currentIdx++;
+    log(`${loserName}派出替补：${ZODIAC[loserTeam.deployed[loserTeam.currentIdx]].emoji} ${ZODIAC[loserTeam.deployed[loserTeam.currentIdx]].name}`, loser.isAI?'ai':'player');
+    sfx('levelup');
+
+    // Clear winner's temporary status from the dead fighter
+    if (winner.isHanging) {
+      winner.isHanging = false;
+      log(`${winnerName}的上吊状态随敌方阵亡而解除`, 'info');
+    }
+    if (winner.poisonMarks > 0) {
+      winner.poisonMarks = 0;
+      log(`${winnerName}的毒印记随敌方阵亡而清除`, 'info');
+    }
+    if (winner.isAirborne) {
+      winner.isAirborne = false;
+    }
+    winner.oppressedNext = false;
+    winner.oppressedActive = false;
+
+    // Set up the new fighter - same pattern as mode2StartBattle
+    loser.level = loserTeam.deployed[loserTeam.currentIdx];
+    resetForNewGame(loser);
+    setupHpForNewGame(loser, winner);
+    // Set monkey form for monkey fighters
+    if (ZODIAC[loser.level].name === '猴') loser.monkeyForm = 'calm';
+    log(`${loserName}派出 ${ZODIAC[loser.level].emoji} ${ZODIAC[loser.level].name} 上场！`, loser.isAI?'ai':'player');
+
+    G.battleEnded = false;
+    G.round = 0;
+    updateMode2Rosters();
+    updateUI();
+
+    // Check if the new fighter is a snake (awakening choice)
+    const newFighterAnimal = ZODIAC[loser.level];
+    if (newFighterAnimal.name === '蛇' && !loser.isAI) {
+      showSnakeAwakeningChoice();
+      return;
+    }
+    // AI snake awakening
+    if (newFighterAnimal.name === '蛇' && loser.isAI) {
+      loser.snakeAwakened = Math.random() < 0.4;
+      loser.maxPoison = loser.snakeAwakened ? 3 : 2;
+      if (loser.snakeAwakened) {
+        loser.maxHp = 6; loser.hp = 6;
+        log('AI蛇进入觉醒状态', 'ai');
+      }
+    }
+
+    setTimeout(()=>beginRound(), 1500);
+  } else {
+    // All fighters dead, the other side wins
+    sfx(G.winner === G.player ? 'win' : 'lose');
+    log(`=== ${winnerName}团队获胜！ ===`, 'win');
+    log(`${loserName}四名角色全部阵亡`, 'special');
+    showOverlay(`
+      <h2 style="color:var(--green)">团队对战结束！</h2>
+      <p style="font-size:1.8em;">${winnerName} 获胜！</p>
+      <p style="color:var(--dim);margin:15px 0;">
+        ${winnerName}方剩余：${winnerTeam.deployed.length - winnerTeam.currentIdx}名角色
+      </p>
+      <div class="btn-row">
+        <button class="neon-btn" onclick="restartGame()">再来一局</button>
+      </div>
+    `);
+  }
+}
+
+function updateMode2Rosters() {
+  if (!G.m2) return;
+  const m2 = G.m2;
+
+  // Player roster
+  let pHtml = '';
+  if (m2.playerTeam.length > 0) {
+    const team = m2.phase === 'battle' || m2.phase === 'deploy_pick' || m2.phase === 'deploy_rps' ? m2.playerDeployed : m2.playerTeam;
+    team.forEach((idx, i) => {
+      const banned = m2.playerBanned.includes(idx);
+      const isDeployed = m2.playerDeployed.includes(idx);
+      const isDead = m2.player.dead.includes(i);
+      const isCurrent = m2.phase === 'battle' && i === m2.player.currentIdx;
+      let cls = 'roster-slot';
+      if (banned) cls += ' banned';
+      else if (isDead) cls += ' dead';
+      else if (isCurrent) cls += ' current';
+      else cls += ' alive';
+      pHtml += `<div class="${cls}" style="border-color:${isCurrent?'var(--cyan)':isDead?'#444':'var(--green)'}">
+        ${ZODIAC[idx].emoji}
+        ${isDeployed || m2.phase === 'battle' ? `<span class="slot-num">${i+1}</span>` : ''}
+      </div>`;
+    });
+  }
+  document.getElementById('player-roster').innerHTML = pHtml;
+
+  // AI roster
+  let aHtml = '';
+  if (m2.aiTeam.length > 0) {
+    const team = m2.phase === 'battle' || m2.phase === 'deploy_pick' || m2.phase === 'deploy_rps' ? m2.aiDeployed : m2.aiTeam;
+    team.forEach((idx, i) => {
+      const banned = m2.aiBanned.includes(idx);
+      const isDeployed = m2.aiDeployed.includes(idx);
+      const isDead = m2.ai.dead.includes(i);
+      const isCurrent = m2.phase === 'battle' && i === m2.ai.currentIdx;
+      let cls = 'roster-slot';
+      if (banned) cls += ' banned';
+      else if (isDead) cls += ' dead';
+      else if (isCurrent) cls += ' current';
+      else cls += ' alive';
+      aHtml += `<div class="${cls}" style="border-color:${isCurrent?'var(--pink)':isDead?'#444':'var(--orange)'}">
+        ${ZODIAC[idx].emoji}
+        ${isDeployed || m2.phase === 'battle' ? `<span class="slot-num">${i+1}</span>` : ''}
+      </div>`;
+    });
+  }
+  document.getElementById('ai-roster').innerHTML = aHtml;
+}
+
+// Update UI periodically
+setInterval(() => { if (G) { updateUI(); if (G.m2) updateMode2Rosters(); } }, 500);
+
+// Initialize
+initGame();
+</script>
+</body>
+</html>
