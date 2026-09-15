@@ -400,10 +400,10 @@ const ZODIAC = [
   {name:'蛇',emoji:'🐍',level:6,baseHp:9,baseAttack:1,special:'放毒：挂毒印记(最多2层)，每层每回合-1血；引爆(1次)：每层2伤害后清除。可觉醒(上限3层,HP上限6)',passive:'搏命：HP上限9，可觉醒(上限3层,HP上限6)'},
   {name:'马',emoji:'🐴',level:7,baseHp:12,baseAttack:1.5,special:'旋踢：1伤害+20%吸血(敌方当前血量的20%，向上取整0.5)',passive:'重伤：伤害等量扣除敌方血量上限(低于饕餮)'},
   {name:'羊',emoji:'🐑',level:8,baseHp:12,baseAttack:1.5,special:'占卜(3次)：预测下回合RPS结果。赢→延迟2伤害；输→回1.5血+操控对方；平→回1血+额外回合',passive:'幸运：每预测成功1次+1次占卜机会'},
-  {name:'猴',emoji:'🐵',level:9,baseHp:15,baseAttack:1,special:'暴击：敌方血量减半(向下取整0.5)',passive:'三相：平静(普攻1+回1,无法特技)|愤怒(普攻2,受双倍)|神格(2回合倒计时,50%减伤,特技变斩杀:HP≤4秒杀,不可切换)'},
-  {name:'鸡',emoji:'🐔',level:10,baseHp:15,baseAttack:1,special:'延生：濒死时可用，治疗成功则退出濒死+1血',passive:'司命：死亡时恢复死亡前血量(1次)，之后2回合100%免伤+普攻2.5'},
+  {name:'猴',emoji:'🐵',level:9,baseHp:14,baseAttack:1,special:'暴击：敌方血量减半(向下取整0.5)',passive:'三相：平静(普攻1+回1,无法特技)|愤怒(普攻2,受双倍)|神格(2回合倒计时,50%减伤,特技变斩杀:HP≤4秒杀,不可切换)'},
+  {name:'鸡',emoji:'🐔',level:10,baseHp:14,baseAttack:1,special:'延生：濒死时可用，治疗成功则退出濒死+1血',passive:'司命：死亡时恢复死亡前血量(1次)，之后2回合100%免伤+普攻2.5'},
   {name:'狗',emoji:'🐶',level:11,baseHp:10,baseAttack:1,special:'审判(3次)：回合开始前用，使敌方特技和被动增益本回合失效(优先最高)',passive:'回溯：每3次平局可回满血(1次/局)'},
-  {name:'猪',emoji:'🐷',level:12,baseHp:15,baseAttack:1.5,special:'压迫(2次)：5伤害+①无视免伤②下回合敌方只能普攻③降为1伤害+获3护盾',passive:'勇毅：血量初次<6获2护盾，<3获1护盾(下回合生效)；<5时普攻2伤害'}
+  {name:'猪',emoji:'🐷',level:12,baseHp:10,baseAttack:1.5,special:'压迫(2次)：5伤害+①无视免伤②下回合敌方只能普攻③降为1伤害+获3护盾',passive:'勇毅：血量初次<6获2护盾，<3获1护盾(下回合生效)；<5时普攻2伤害'}
 ];
 
 const RPS = {rock:'✊',paper:'✋',scissors:'✌️'};
@@ -449,27 +449,29 @@ function createPlayer(isAI) {
 }
 
 function initGame() {
-  G = {
-    mode: 1,
-    phase: 'title',
-    player: createPlayer(false),
-    ai: createPlayer(true),
-    round: 0,
-    gamesPlayed: 0,
-    log: [],
-    rpsWinner: null,
-    pendingDamage: {player: 0, ai: 0},
-    pendingHeal: {player: 0, ai: 0},
-    damageDetails: {player: [], ai: []},
-    actionPending: false,
-    rabbitDodgePrompt: false,
-    goatPredictPhase: false,
-    currentAction: null,
-    battleEnded: false,
-    soundCtx: null,
-    // Mode 2 state
-    m2: null,
-  };
+ G = {
+ mode: 1,
+ phase: 'title',
+ player: createPlayer(false),
+ ai: createPlayer(true),
+ round: 0,
+ gamesPlayed: 0,
+ log: [],
+ rpsWinner: null,
+ rpsTie: false,
+ pendingDamage: {player: 0, ai: 0},
+ pendingHeal: {player: 0, ai: 0},
+ damageDetails: {player: [], ai: []},
+ actionPending: false,
+ rabbitDodgePrompt: false,
+ goatPredictPhase: false,
+ currentAction: null,
+  battleEnded: false,
+  inputLocked: false,
+  soundCtx: null,
+ // Mode 2 state
+ m2: null,
+ };
 }
 
 // ==================== SOUND ====================
@@ -521,6 +523,9 @@ function log(msg, type='info') {
 
 function getAnimal(level) { return ZODIAC[level]; }
 
+function lockInput() { G.inputLocked = true; }
+function unlockInput() { G.inputLocked = false; }
+
 function getActionName(action) {
   const names = {
     attack: '普通攻击', heal: '治疗', special: '特技', dodge: '闪避',
@@ -547,9 +552,9 @@ function getAttack(p) {
   if (!p.judged) {
     // Pig passive: HP < 5 → attack 2
     if (animal.name === '猪' && p.hp < 5) atk = 2;
-    // Tiger win streak
+    // Tiger win streak (mode 2: no cap; mode 1: cap at 3)
     if (animal.name === '虎' && p.winStreak >= 1) {
-      atk = Math.min(1 + p.winStreak, 3);
+      atk = G.mode === 2 ? (1 + p.winStreak) : Math.min(1 + p.winStreak, 3);
     }
     // Monkey forms (attack boost only, not damage vulnerability)
     if (animal.name === '猴') {
@@ -641,6 +646,7 @@ function startNewGame() {
 }
 
 function showSnakeAwakeningChoice() {
+  unlockInput();
   showOverlay(`
     <h2>蛇 · 觉醒选择</h2>
     <p>你是否要进入<strong style="color:var(--pink)">觉醒状态</strong>？</p>
@@ -653,6 +659,8 @@ function showSnakeAwakeningChoice() {
 }
 
 function chooseSnakeAwakening(awaken) {
+  if (G.inputLocked) return;
+  lockInput();
   G.player.snakeAwakened = awaken;
   G.player.maxPoison = awaken ? 3 : 2;
   if (awaken) {
@@ -694,7 +702,7 @@ function resetForNewGame(p) {
   p.rpsChoice = null; p.switchedFormThisTurn = false;
   // Reset special uses based on animal
   const animal = ZODIAC[p.level];
-  p.dodgeUses = animal.name === '兔' ? 3 : 0;
+  p.dodgeUses = animal.name === '兔' ? (G.mode === 2 ? 5 : 3) : 0;
   p.divineUses = animal.name === '羊' ? 3 : 0;
   p.judgeUses = animal.name === '狗' ? 3 : 0;
   p.oppressUses = animal.name === '猪' ? 2 : 0;
@@ -708,7 +716,22 @@ function setupHpForNewGame(p, opponent) {
   const animal = ZODIAC[p.level];
   let baseHp = animal.baseHp;
   let baseMaxHp = animal.baseHp;
-  // Snake special handling
+  let baseAttack = animal.baseAttack;
+
+  // Mode 2: all non-rat non-snake get 15 HP, rat gets 20
+  if (G.mode === 2) {
+    if (animal.name === '鼠') {
+      baseHp = 20; baseMaxHp = 20;
+    } else if (animal.name !== '蛇') {
+      baseHp = 15; baseMaxHp = 15;
+    }
+    // Mode 2 attack overrides
+    if (animal.name === '牛') baseAttack = 1.5;
+    if (animal.name === '兔') baseAttack = 1.5;
+    if (animal.name === '龙') baseAttack = 1.5;
+  }
+
+  // Snake special handling (both modes)
   if (animal.name === '蛇') {
     baseHp = 9; baseMaxHp = 9;
     if (p.snakeAwakened) { baseHp = 6; baseMaxHp = 6; }
@@ -724,7 +747,7 @@ function setupHpForNewGame(p, opponent) {
   p.hp = baseHp;
   p.maxHp = baseMaxHp;
   p.baseMaxHp = baseMaxHp;
-  p.baseAttack = animal.baseAttack;
+  p.baseAttack = baseAttack;
 }
 
 function beginRound() {
@@ -818,6 +841,7 @@ function checkMonkeyGodCountdown(p) {
 }
 
 function handlePreRoundAbilities() {
+  unlockInput();
   // Player pre-round abilities
   const pAnimal = ZODIAC[G.player.level];
   const aAnimal = ZODIAC[G.ai.level];
@@ -874,6 +898,8 @@ function handleAIPreRound() {
 }
 
 function useDogJudge(use) {
+  if (G.inputLocked) return;
+  lockInput();
   sfx('click');
   if (use) {
     G.player.judgePending = true;
@@ -885,6 +911,8 @@ function useDogJudge(use) {
 }
 
 function useGoatDivine(use) {
+  if (G.inputLocked) return;
+  lockInput();
   sfx('click');
   if (use) {
     G.player.divineUses--;
@@ -894,12 +922,15 @@ function useGoatDivine(use) {
       <button class="neon-btn orange" onclick="setGoatPrediction('lose')">预测 输</button>
       <button class="neon-btn cyan" onclick="setGoatPrediction('tie')">预测 平</button>
     `);
+    unlockInput();
     return;
   }
   handleAIPreRound();
 }
 
 function setGoatPrediction(pred) {
+  if (G.inputLocked) return;
+  lockInput();
   sfx('click');
   G.player.prediction = pred;
   log(`玩家预测本回合：${pred==='win'?'赢':pred==='lose'?'输':'平'}`, 'player');
@@ -908,6 +939,7 @@ function setGoatPrediction(pred) {
 
 // ==================== RPS PHASE ====================
 function startRPSPhase() {
+  unlockInput();
   showActionArea(`
     <span class="prompt-text">选择你的出招：</span>
     <button class="rps-btn" onclick="playerRPS('rock')">✊</button>
@@ -941,6 +973,7 @@ function aiChooseRPS() {
 }
 
 function resolveRPS() {
+  G.rpsTie = false;
   const p = G.player.rpsChoice;
   const a = G.ai.rpsChoice;
   log(`玩家：${RPS_NAMES[p]} vs AI：${RPS_NAMES[a]}`, 'system');
@@ -949,6 +982,7 @@ function resolveRPS() {
     // Tie
     sfx('tie');
     log('平局！', 'info');
+    G.rpsTie = true;
     G.player.dogTieCount++;
     G.ai.dogTieCount++;
     // Dog's回溯
@@ -1179,6 +1213,7 @@ function proceedToAction(winner) {
 }
 
 function showPlayerActionButtons(winner, loser) {
+  unlockInput();
   const animal = ZODIAC[winner.level];
   const isWinner = winner === G.player;
   const atk = getAttack(winner);
@@ -1233,15 +1268,16 @@ function showPlayerActionButtons(winner, loser) {
   </button>`);
 
   // Heal
-  const healAmount = (G.mode === 2 && animal.name === '鼠') ? 2 : 1;
+  const healAmount = (G.mode === 2 && animal.name === '鼠') ? 1.5 : 1;
   buttons.push(`<button class="action-btn heal" onclick="playerAction('heal')">
     <span>治疗</span><span class="btn-desc">回复${healAmount}点血量</span>
   </button>`);
 
   // Special moves
   if (animal.name === '牛') {
+    const hangDmg = G.mode === 2 ? 1 : 0.5;
     buttons.push(`<button class="action-btn special" onclick="playerAction('special')">
-      <span>上吊</span><span class="btn-desc">0.5伤害+使敌方无法攻击</span>
+      <span>上吊</span><span class="btn-desc">${hangDmg}伤害+使敌方无法攻击</span>
     </button>`);
   } else if (animal.name === '兔') {
     if (winner.dodgeUses > 0) {
@@ -1255,8 +1291,9 @@ function showPlayerActionButtons(winner, loser) {
       </button>`);
     }
   } else if (animal.name === '龙') {
+    const flyHeal = G.mode === 2 ? 1 : 0.5;
     buttons.push(`<button class="action-btn special" onclick="playerAction('special')">
-      <span>腾飞</span><span class="btn-desc">回0.5血+滞空(受伤≤1)</span>
+      <span>腾飞</span><span class="btn-desc">回${flyHeal}血+滞空(受伤≤1)</span>
     </button>`);
   } else if (animal.name === '蛇') {
     buttons.push(`<button class="action-btn special" onclick="playerAction('poison')">
@@ -1321,6 +1358,8 @@ function showPlayerActionButtons(winner, loser) {
 }
 
 function playerAction(action) {
+  if (G.inputLocked) return;
+  lockInput();
   sfx('click');
   G.currentAction = action;
   const winner = G.rpsWinner === 'player' ? G.player : G.ai;
@@ -1357,6 +1396,7 @@ function playerAction(action) {
 }
 
 function showPigOppressOptions(winner, loser) {
+  unlockInput();
   showActionArea(`
     <span class="prompt-text">选择【压迫】的附加效果：</span>
     <button class="action-btn special" onclick="doPigOppress(1)">
@@ -1372,6 +1412,8 @@ function showPigOppressOptions(winner, loser) {
 }
 
 function doPigOppress(option) {
+  if (G.inputLocked) return;
+  lockInput();
   sfx('special');
   const winner = G.rpsWinner === 'player' ? G.player : G.ai;
   const loser = G.rpsWinner === 'player' ? G.ai : G.player;
@@ -1437,7 +1479,7 @@ function doAttack(winner, loser) {
 
 function doHeal(p) {
   const animal = ZODIAC[p.level];
-  const healAmount = (G.mode === 2 && animal.name === '鼠') ? 2 : 1;
+  const healAmount = (G.mode === 2 && animal.name === '鼠') ? 1.5 : 1;
   healPlayer(p, healAmount);
   log(`${p.isAI?'AI':'玩家'}治疗 → 回复${healAmount}点血量`, 'heal');
   sfx('heal');
@@ -1453,18 +1495,20 @@ function doSpecial(winner, loser) {
   sfx('special');
 
   if (animal.name === '牛') {
-    // 上吊
-    queueDamage(loser, 0.5, '上吊');
-    loser.isHanging = true;
-    log(`${winner.isAI?'AI':'玩家'}使用【上吊】→ 0.5伤害+敌方无法攻击`, winner.isAI?'ai':'player');
-    shakePanel(loser);
-  } else if (animal.name === '龙') {
-    // 腾飞
-    healPlayer(winner, 0.5);
-    winner.isAirborne = true;
-    winner.airborneEndRound = G.round + 1;
-    log(`${winner.isAI?'AI':'玩家'}使用【腾飞】→ 回0.5血+进入滞空状态`, winner.isAI?'ai':'player');
-    flashPanel(winner, 'cyan');
+      // 上吊 (mode 2: 1 damage; mode 1: 0.5 damage)
+      const hangDmg = G.mode === 2 ? 1 : 0.5;
+      queueDamage(loser, hangDmg, '上吊');
+      loser.isHanging = true;
+      log(`${winner.isAI?'AI':'玩家'}使用【上吊】→ ${hangDmg}伤害+敌方无法攻击`, winner.isAI?'ai':'player');
+      shakePanel(loser);
+    } else if (animal.name === '龙') {
+      // 腾飞 (mode 2: heal 1; mode 1: heal 0.5)
+      const flyHeal = G.mode === 2 ? 1 : 0.5;
+      healPlayer(winner, flyHeal);
+      winner.isAirborne = true;
+      winner.airborneEndRound = G.round + 1;
+      log(`${winner.isAI?'AI':'玩家'}使用【腾飞】→ 回${flyHeal}血+进入滞空状态`, winner.isAI?'ai':'player');
+      flashPanel(winner, 'cyan');
   } else if (animal.name === '马') {
     // 旋踢
     queueDamage(loser, 1, '旋踢');
@@ -1648,6 +1692,21 @@ function resolveRound() {
   if (G.pendingDamage.ai > 0) processDamage(G.ai, G.player);
 
   // 3. Process healing
+  // Mode 2: Rat's饕餮 passive - heal 1 per round (0.5 on tie)
+  if (G.mode === 2) {
+    const pAnimal2 = ZODIAC[G.player.level];
+    const aAnimal2 = ZODIAC[G.ai.level];
+    if (pAnimal2.name === '鼠' && !G.player.judged) {
+      const ratHeal = G.rpsTie ? 0.5 : 1;
+      healPlayer(G.player, ratHeal);
+      log(`玩家鼠【饕餮】回复${ratHeal}血`, 'heal');
+    }
+    if (aAnimal2.name === '鼠' && !G.ai.judged) {
+      const ratHeal = G.rpsTie ? 0.5 : 1;
+      healPlayer(G.ai, ratHeal);
+      log(`AI鼠【饕餮】回复${ratHeal}血`, 'heal');
+    }
+  }
   processHeal(G.player);
   processHeal(G.ai);
 
@@ -1913,10 +1972,11 @@ function aiActionPhase() {
 }
 
 function showPlayerControlButtons(winner, loser) {
+  unlockInput();
   let buttons = [];
   const atk = getAttack(winner);
   const animal = ZODIAC[winner.level];
-  const healAmount = (G.mode === 2 && animal.name === '鼠') ? 2 : 1;
+  const healAmount = (G.mode === 2 && animal.name === '鼠') ? 1.5 : 1;
 
   // If AI is oppressed, only normal attack
   if (winner.oppressedActive) {
@@ -1943,16 +2003,18 @@ function showPlayerControlButtons(winner, loser) {
   </button>`);
 
   if (animal.name === '牛') {
+    const hangDmg = G.mode === 2 ? 1 : 0.5;
     buttons.push(`<button class="action-btn special" onclick="playerControlAI('special')">
-      <span>上吊</span><span class="btn-desc">0.5伤害+使敌方无法攻击</span>
+      <span>上吊</span><span class="btn-desc">${hangDmg}伤害+使敌方无法攻击</span>
     </button>`);
   } else if (animal.name === '兔' && winner.dodgeUses > 0) {
     buttons.push(`<button class="action-btn special" onclick="playerControlAI('dodge')">
       <span>闪避 (${winner.dodgeUses})</span><span class="btn-desc">RPS判定胜则免伤</span>
     </button>`);
   } else if (animal.name === '龙') {
+    const flyHeal = G.mode === 2 ? 1 : 0.5;
     buttons.push(`<button class="action-btn special" onclick="playerControlAI('special')">
-      <span>腾飞</span><span class="btn-desc">回0.5血+滞空(受伤≤1)</span>
+      <span>腾飞</span><span class="btn-desc">回${flyHeal}血+滞空(受伤≤1)</span>
     </button>`);
   } else if (animal.name === '蛇') {
     buttons.push(`<button class="action-btn special" onclick="playerControlAI('poison')">
@@ -2000,6 +2062,8 @@ function showPlayerControlButtons(winner, loser) {
 }
 
 function playerControlAI(action) {
+  if (G.inputLocked) return;
+  lockInput();
   sfx('click');
   const winner = G.ai;
   const loser = G.player;
@@ -2190,6 +2254,7 @@ function executeAIAction(winner, loser, action) {
 }
 
 function showRabbitDodgePrompt(winner, loser, action) {
+  unlockInput();
   showActionArea(`
     <span class="prompt-text" style="color:var(--magenta)">AI即将攻击！是否使用闪避？</span>
     <button class="neon-btn magenta" onclick="playerRabbitDodge(false)">闪避 (${loser.dodgeUses})</button>
@@ -2199,6 +2264,8 @@ function showRabbitDodgePrompt(winner, loser, action) {
 }
 
 function playerRabbitDodge(extreme) {
+  if (G.inputLocked) return;
+  lockInput();
   sfx('click');
   const loser = G.player;
   if (extreme === 'skip') {
@@ -2223,21 +2290,25 @@ function handleGameEnd() {
   if (G.mode === 2) {
     // Check if the losing team has more fighters
     const loserSide = loser.isAI ? G.m2.ai : G.m2.player;
-    if (loserSide.currentIdx < loserSide.deployed.length - 1) {
+    const loserDeployed = loser.isAI ? G.m2.aiDeployed : G.m2.playerDeployed;
+    if (loserSide.currentIdx < loserDeployed.length - 1) {
       // Still have fighters left, but this individual fight is over
       // This is handled in mode2FighterDeath
       return;
     }
     // All fighters dead, the other side wins the entire match
     sfx(winner === G.player ? 'win' : 'lose');
+    const winnerTeam2 = winner.isAI ? G.m2.ai : G.m2.player;
+    const winnerDeployed2 = winner.isAI ? G.m2.aiDeployed : G.m2.playerDeployed;
     showOverlay(`
       <h2 style="color:var(--green)">团队对战结束！</h2>
       <p style="font-size:1.8em;">${winnerName} 获胜！</p>
-      <p style="color:var(--dim);margin:15px 0;">${winnerName}方剩余角色：${(winner.isAI?G.m2.ai:G.m2.player).deployed.length - (winner.isAI?G.m2.ai:G.m2.player).currentIdx}名</p>
+      <p style="color:var(--dim);margin:15px 0;">${winnerName}方剩余角色：${winnerDeployed2.length - winnerTeam2.currentIdx}名</p>
       <div class="btn-row">
         <button class="neon-btn" onclick="restartGame()">再来一局</button>
       </div>
     `);
+    unlockInput();
     return;
   }
 
@@ -2272,6 +2343,7 @@ function handleGameEnd() {
       <button class="neon-btn" onclick="continueGame()">继续下一局</button>
     </div>
   `);
+  unlockInput();
 }
 
 function showFinalWin(winnerName) {
@@ -2284,15 +2356,20 @@ function showFinalWin(winnerName) {
       <button class="neon-btn" onclick="restartGame()">再来一局</button>
     </div>
   `);
+  unlockInput();
 }
 
 function continueGame() {
+  if (G.inputLocked) return;
+  lockInput();
   hideOverlay();
   sfx('click');
   startNewGame();
 }
 
 function restartGame() {
+  if (G.inputLocked) return;
+  lockInput();
   hideOverlay();
   sfx('click');
   document.getElementById('title-screen').style.display = 'flex';
@@ -2445,6 +2522,7 @@ function startMode2() {
 
 function mode2TeamSelectRPS() {
   G.m2.phase = 'team_select_rps';
+  unlockInput();
   showActionArea(`
     <span class="prompt-text">选人阶段 · 选择出招（胜者先选角色）：</span>
     <button class="rps-btn" onclick="mode2TeamSelectRPSResolve('rock')">✊</button>
@@ -2516,6 +2594,7 @@ function mode2TeamSelectNext() {
 }
 
 function mode2TeamSelectShowGrid() {
+  unlockInput();
   const m2 = G.m2;
   let cards = '';
   for (let i = 0; i < 12; i++) {
@@ -2545,6 +2624,8 @@ function mode2TeamSelectShowGrid() {
 }
 
 function mode2TeamPick(idx) {
+  if (G.inputLocked) return;
+  lockInput();
   sfx('click');
   const m2 = G.m2;
   if (m2.playerTeam.includes(idx) || m2.aiTeam.includes(idx)) return;
@@ -2595,6 +2676,7 @@ function mode2BanRPS() {
   }
 
   m2.phase = 'ban_rps';
+  unlockInput();
   showActionArea(`
     <span class="prompt-text">BP第${m2.banRound+1}轮 · 选择出招（胜者禁对方1名）：</span>
     <button class="rps-btn" onclick="mode2BanRPSResolve('rock')">✊</button>
@@ -2644,6 +2726,7 @@ function mode2BanRPSResolve(choice) {
 }
 
 function mode2BanPickShow() {
+  unlockInput();
   const m2 = G.m2;
   let cards = '';
   m2.aiTeam.forEach(idx => {
@@ -2665,6 +2748,8 @@ function mode2BanPickShow() {
 }
 
 function mode2BanPick(idx) {
+  if (G.inputLocked) return;
+  lockInput();
   sfx('special');
   const m2 = G.m2;
   m2.aiBanned.push(idx);
@@ -2697,6 +2782,7 @@ function mode2StartDeployPhase() {
 
 function mode2DeployRPS() {
   const m2 = G.m2;
+  unlockInput();
   showActionArea(`
     <span class="prompt-text">排兵布阵 · 选择出招（胜者=红方，败者=蓝方）：</span>
     <button class="rps-btn" onclick="mode2DeployRPSResolve('rock')">✊</button>
@@ -2787,6 +2873,7 @@ function mode2DeployNext() {
 }
 
 function mode2DeployShowPlayer(orderHtml, count) {
+  unlockInput();
   const m2 = G.m2;
   // Always rebuild draft order if not provided
   if (!orderHtml) {
@@ -2820,6 +2907,8 @@ function mode2DeployShowPlayer(orderHtml, count) {
 }
 
 function mode2DeployPick(idx) {
+  if (G.inputLocked) return;
+  lockInput();
   sfx('click');
   const m2 = G.m2;
   if (m2.playerDeployed.includes(idx)) return;
@@ -2925,10 +3014,11 @@ function mode2StartBattle() {
 }
 
 function setupMode2Fighter(playerObj, teamState, opponentObj) {
-  const idx = teamState.deployed[teamState.currentIdx];
+  const deployed = playerObj.isAI ? G.m2.aiDeployed : G.m2.playerDeployed;
+  const idx = deployed[teamState.currentIdx];
   playerObj.level = idx;
   resetForNewGame(playerObj);
-  const oppIdx = opponentObj.level !== undefined ? opponentObj.level : teamState.deployed[teamState.currentIdx];
+  const oppIdx = opponentObj.level !== undefined ? opponentObj.level : deployed[teamState.currentIdx];
   setupHpForNewGame(playerObj, opponentObj);
   log(`${playerObj.isAI?'AI':'玩家'}派出 ${ZODIAC[idx].emoji} ${ZODIAC[idx].name} 上场！`, playerObj.isAI?'ai':'player');
   sfx('levelup');
@@ -2944,19 +3034,34 @@ function mode2FighterDeath(deadFighter, killer) {
 }
 
 function mode2HandleBattleEnd() {
+  // Defensive: hide any leftover overlay and clear action area
+  hideOverlay();
+  showActionArea('');
+
   const m2 = G.m2;
+  if (!G.winner) {
+    console.error('mode2HandleBattleEnd: G.winner is null!');
+    return;
+  }
   const loser = G.winner === G.player ? G.ai : G.player;
   const loserTeam = loser.isAI ? m2.ai : m2.player;
+  const loserDeployed = loser.isAI ? m2.aiDeployed : m2.playerDeployed;
   const winnerTeam = G.winner.isAI ? m2.ai : m2.player;
   const winnerName = G.winner.isAI ? 'AI' : '玩家';
   const loserName = loser.isAI ? 'AI' : '玩家';
   const winner = G.winner;
 
+  // Safety: if winner also died, restore to 1 HP
+  if (winner.hp <= 0) {
+    winner.hp = 1;
+    log(`${winnerName}险胜！(HP:1)`, 'win');
+  }
+
   // Check if loser has more fighters
-  if (loserTeam.currentIdx < loserTeam.deployed.length - 1) {
+  if (loserTeam.currentIdx < loserDeployed.length - 1) {
     // Bring in the next fighter
     loserTeam.currentIdx++;
-    log(`${loserName}派出替补：${ZODIAC[loserTeam.deployed[loserTeam.currentIdx]].emoji} ${ZODIAC[loserTeam.deployed[loserTeam.currentIdx]].name}`, loser.isAI?'ai':'player');
+    log(`${loserName}派出替补：${ZODIAC[loserDeployed[loserTeam.currentIdx]].emoji} ${ZODIAC[loserDeployed[loserTeam.currentIdx]].name}`, loser.isAI?'ai':'player');
     sfx('levelup');
 
     // Clear winner's temporary status from the dead fighter
@@ -2975,7 +3080,7 @@ function mode2HandleBattleEnd() {
     winner.oppressedActive = false;
 
     // Set up the new fighter - same pattern as mode2StartBattle
-    loser.level = loserTeam.deployed[loserTeam.currentIdx];
+    loser.level = loserDeployed[loserTeam.currentIdx];
     resetForNewGame(loser);
     setupHpForNewGame(loser, winner);
     // Set monkey form for monkey fighters
@@ -3009,16 +3114,18 @@ function mode2HandleBattleEnd() {
     sfx(G.winner === G.player ? 'win' : 'lose');
     log(`=== ${winnerName}团队获胜！ ===`, 'win');
     log(`${loserName}四名角色全部阵亡`, 'special');
+    const winnerDeployedArr = G.winner.isAI ? m2.aiDeployed : m2.playerDeployed;
     showOverlay(`
       <h2 style="color:var(--green)">团队对战结束！</h2>
       <p style="font-size:1.8em;">${winnerName} 获胜！</p>
       <p style="color:var(--dim);margin:15px 0;">
-        ${winnerName}方剩余：${winnerTeam.deployed.length - winnerTeam.currentIdx}名角色
+        ${winnerName}方剩余：${winnerDeployedArr.length - winnerTeam.currentIdx}名角色
       </p>
       <div class="btn-row">
         <button class="neon-btn" onclick="restartGame()">再来一局</button>
       </div>
     `);
+    unlockInput();
   }
 }
 
